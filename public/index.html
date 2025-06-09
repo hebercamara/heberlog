@@ -390,6 +390,13 @@
                     <button type="button" id="btnVisualizarDados" class="w-full sm:w-auto flex-grow btn-secondary-view font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-secondary-view focus:ring-offset-2">Visualizar Cadastros</button>
                     <button type="button" id="btnExportarExcel" class="w-full sm:w-auto flex-grow btn-secondary-export font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-secondary-export focus:ring-offset-2">Exportar para Excel</button>
                 </div>
+                
+                <!-- Botão de Admin para Gerenciar Modelos -->
+                <div class="mt-6 border-t pt-6">
+                    <button type="button" id="btnGerenciarModelos" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-md shadow-sm hidden">
+                        Painel de Gerenciamento de Contratos
+                    </button>
+                </div>
             </form>
         </div>
 
@@ -490,7 +497,9 @@
         const btnSubmitForm = document.getElementById('btnSubmitForm');
         const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
         const btnVisualizarDados = document.getElementById('btnVisualizarDados');
-        const btnExportarExcel = document.getElementById('btnExportarExcel'); 
+        const btnExportarExcel = document.getElementById('btnExportarExcel');
+        const btnGerenciarModelos = document.getElementById('btnGerenciarModelos'); // Novo botão
+        
         const visualizacaoDadosContainer = document.getElementById('visualizacaoDadosContainer');
         const visualizacaoDadosDiv = document.getElementById('visualizacaoDados');
         const visualizacaoStatus = document.getElementById('visualizacaoStatus');
@@ -533,7 +542,7 @@
         const operacaoSelect = document.getElementById('operacao');
 
         function checkDOMElements() {
-            const elements = { authSection, loginFormContainer, registerFormContainer, loginForm, registerForm, showRegisterBtn, showLoginBtn, authStatusMessage, appSection, logoutBtn, userEmailDisplay, userIdDisplay, providerForm, formTitle, statusMessage, loadingSpinner, editingDocIdInput, btnSubmitForm, btnCancelarEdicao, btnVisualizarDados, btnExportarExcel, visualizacaoDadosContainer, visualizacaoDadosDiv, visualizacaoStatus, btnFecharVisualizacao, statusContainer, statusPrestadorSelect, nomeSocioInput, razaoSocialInput, rgSocioInput, cpfSocioInput, cpfError, empresaCEPInput, empresaLogradouroInput, empresaNumeroInput, empresaComplementoInput, empresaBairroInput, empresaCidadeInput, empresaUFInput, empresaCepStatus, enderecoEmpresarioIgualEmpresaCheckbox, secaoEnderecoEmpresarioDiv, empresarioCEPInput, empresarioLogradouroInput, empresarioNumeroInput, empresarioComplementoInput, empresarioBairroInput, empresarioCidadeInput, empresarioUFInput, empresarioCepStatus, cnpjInput, cnpjError, valorDiariaInput, valorDiariaError, tipoServicoSelect, operacaoSelect };
+            const elements = { authSection, loginFormContainer, registerFormContainer, loginForm, registerForm, showRegisterBtn, showLoginBtn, authStatusMessage, appSection, logoutBtn, userEmailDisplay, userIdDisplay, providerForm, formTitle, statusMessage, loadingSpinner, editingDocIdInput, btnSubmitForm, btnCancelarEdicao, btnVisualizarDados, btnExportarExcel, btnGerenciarModelos, visualizacaoDadosContainer, visualizacaoDadosDiv, visualizacaoStatus, btnFecharVisualizacao, statusContainer, statusPrestadorSelect, nomeSocioInput, razaoSocialInput, rgSocioInput, cpfSocioInput, cpfError, empresaCEPInput, empresaLogradouroInput, empresaNumeroInput, empresaComplementoInput, empresaBairroInput, empresaCidadeInput, empresaUFInput, empresaCepStatus, enderecoEmpresarioIgualEmpresaCheckbox, secaoEnderecoEmpresarioDiv, empresarioCEPInput, empresarioLogradouroInput, empresarioNumeroInput, empresarioComplementoInput, empresarioBairroInput, empresarioCidadeInput, empresarioUFInput, empresarioCepStatus, cnpjInput, cnpjError, valorDiariaInput, valorDiariaError, tipoServicoSelect, operacaoSelect };
             for (const key in elements) {
                 if (!elements[key]) {
                     console.error(`Erro Crítico: Elemento DOM '${key}' não encontrado.`);
@@ -556,18 +565,45 @@
             function showLoading(isLoading) { loadingSpinner.classList.toggle('hidden', !isLoading); }
             function showStatusMessage(message, type = 'success', duration = 5000) { statusMessage.textContent = message; statusMessage.className = `mb-4 text-center p-3 rounded-md text-sm ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`; statusMessage.classList.remove('hidden');  if(duration > 0) {  setTimeout(() => { if(statusMessage.textContent === message) {  statusMessage.classList.add('hidden'); } }, duration); } }
             
-            onAuthStateChanged(authInstance, (user) => { 
+            async function verificarAdminStatus(user) {
+                if (!user) {
+                    btnGerenciarModelos.classList.add('hidden');
+                    return;
+                }
+                try {
+                    const adminsRef = collection(db, "admins");
+                    const querySnapshot = await getDocs(adminsRef);
+                    const adminEmails = querySnapshot.docs.map(doc => doc.data().email);
+                    if (adminEmails.includes(user.email)) {
+                        btnGerenciarModelos.classList.remove('hidden');
+                    } else {
+                        btnGerenciarModelos.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error("Erro ao verificar status de admin:", error);
+                    btnGerenciarModelos.classList.add('hidden');
+                }
+            }
+
+            onAuthStateChanged(authInstance, async (user) => { 
                 if (user) {
                     currentUserId = user.uid; currentUserEmail = user.email; userIdDisplay.textContent = currentUserId; userEmailDisplay.textContent = currentUserEmail;
                     btnVisualizarDados.disabled = false; btnExportarExcel.disabled = false; 
+                    await verificarAdminStatus(user);
                     showAppSection();
                 } else {
                     currentUserId = null; currentUserEmail = null; userIdDisplay.textContent = 'N/A'; userEmailDisplay.textContent = 'N/A';
                     btnVisualizarDados.disabled = true; btnExportarExcel.disabled = true; 
+                    btnGerenciarModelos.classList.add('hidden');
                     if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
                     showAuthSection();
                 }
             });
+
+            btnGerenciarModelos.addEventListener('click', () => {
+                window.open('gerenciar_modelos.html', '_blank');
+            });
+
             registerForm.addEventListener('submit', async (e) => { e.preventDefault(); showLoading(true); authStatusMessage.classList.add('hidden'); const email = document.getElementById('registerEmail').value; const password = document.getElementById('registerPassword').value; const confirmPassword = document.getElementById('confirmPassword').value; if (password !== confirmPassword) { showAuthStatusMessage("As senhas não coincidem.", "error"); showLoading(false); return; } if (password.length < 6) { showAuthStatusMessage("A senha deve ter pelo menos 6 caracteres.", "error"); showLoading(false); return; } try { await createUserWithEmailAndPassword(authInstance, email, password); showAuthStatusMessage("Usuário registrado com sucesso! Redirecionando...", "success"); } catch (error) { let friendlyMessage = `Erro ao registrar: ${error.message} (Código: ${error.code})`; if (error.code === 'auth/email-already-in-use') { friendlyMessage = "Este email já está cadastrado."; } else if (error.code === 'auth/weak-password') { friendlyMessage = "A senha é muito fraca."; } else if (error.code === 'auth/invalid-email') { friendlyMessage = "O formato do email é inválido."; } showAuthStatusMessage(friendlyMessage, "error"); } finally { showLoading(false); } });
             loginForm.addEventListener('submit', async (e) => { e.preventDefault(); showLoading(true); authStatusMessage.classList.add('hidden'); const email = document.getElementById('loginEmail').value; const password = document.getElementById('loginPassword').value; try { await signInWithEmailAndPassword(authInstance, email, password); } catch (error) { let friendlyMessage = `Erro ao fazer login: ${error.message} (Código: ${error.code})`; if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') { friendlyMessage = "Email ou senha inválidos."; } else if (error.code === 'auth/invalid-email') { friendlyMessage = "O formato do email é inválido."; } else if (error.code === 'auth/api-key-not-valid') { friendlyMessage = "Erro: Chave da API do Firebase inválida."; } showAuthStatusMessage(friendlyMessage, "error"); } finally { showLoading(false); } });
             logoutBtn.addEventListener('click', async () => { showLoading(true); try { await signOut(authInstance); resetFormulario(); visualizacaoDadosContainer.classList.add('hidden'); } catch (error) { showStatusMessage(`Erro ao fazer logout: ${error.message}`, "error", 0); } finally { showLoading(false); } });
