@@ -30,13 +30,26 @@
         .btn-primary:hover {
             background-color: #b91c1c; 
         }
+        /* Estilo para o conteúdo do contrato renderizado */
+        #contratoConteudo p {
+            margin-bottom: 1em;
+        }
+        #contratoConteudo h1, #contratoConteudo h2, #contratoConteudo h3 {
+            font-weight: bold;
+            margin-top: 1.2em;
+            margin-bottom: 0.5em;
+        }
+        #contratoConteudo ul, #contratoConteudo ol {
+            padding-left: 2em;
+            margin-bottom: 1em;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
 
     <div id="loadingSpinner" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
         <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
-        <p class="text-white text-lg ml-4">Carregando dados do contrato...</p>
+        <p class="text-white text-lg ml-4">A carregar dados do contrato...</p>
     </div>
 
     <div id="contratoContainer" class="bg-white p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-4xl mx-auto hidden">
@@ -63,12 +76,13 @@
             </div>
         </div>
         
-        <div class="overflow-y-auto max-h-[60vh] bg-gray-50 p-4 border rounded-md mb-4">
-            <pre id="contratoConteudo" class="whitespace-pre-wrap text-sm text-gray-900 font-sans"></pre>
+        <div class="overflow-y-auto max-h-[60vh] bg-gray-50 p-6 border rounded-md mb-4">
+            <!-- Alterado de <pre> para <div> para renderizar HTML -->
+            <div id="contratoConteudo" class="text-sm text-gray-900"></div>
         </div>
         
         <div class="flex flex-col sm:flex-row gap-3">
-             <button id="copiarContratoBtn" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md">Copiar Texto do Contrato</button>
+             <button id="copiarContratoBtn" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md">Copiar Texto (sem formatação)</button>
              <button id="imprimirContratoBtn" class="w-full sm:w-auto flex-grow bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md">Imprimir</button>
         </div>
         <p id="statusMessage" class="mt-4 text-center text-sm"></p>
@@ -146,7 +160,7 @@
             return resultado;
         }
 
-        // --- FUNÇÕES DE BUSCA E PREENCHIMENTO (AGORA USANDO FIRESTORE) ---
+        // --- FUNÇÕES DE BUSCA E PREENCHIMENTO ---
         async function buscarModeloContrato(tipoServico) {
             const nomeModelo = tipoServico.toLowerCase();
             const modeloRef = doc(db, "modelos_contrato", nomeModelo);
@@ -162,14 +176,14 @@
                 return dadosModelo.template;
             } catch (error) {
                 console.error("Erro ao buscar modelo de contrato do Firestore:", error);
-                throw error; // Re-throw para ser pego pela função principal
+                throw error;
             }
         }
 
-        function preencherContrato(modelo, dados) {
+        function preencherContrato(modeloHTML, dados) {
             const dataAtual = new Date().toLocaleDateString('pt-BR');
             const valorExtenso = numeroParaExtenso(dados.valorDiaria);
-            let contratoFinal = modelo;
+            let contratoFinal = modeloHTML;
             const placeholders = {
                 '\\[Razao Social\\]': dados.razaoSocial || '',
                 '\\[CNPJ\\]': dados.cnpj ? formatCnpj(dados.cnpj) : '',
@@ -193,10 +207,10 @@
                 '\\[Valor Diaria\\]': dados.valorDiaria ? dados.valorDiaria.toFixed(2).replace('.', ',') : '0,00',
                 '\\[Valor Diaria por Extenso\\]': valorExtenso,
                 '\\[Data Atual ou Data de Cadastro\\]': dataAtual,
-                '`\\[Nome Testemunha 1\\]`': '', 
-                '`\\[CPF Testemunha 1\\]`': '',
-                '`\\[Nome Testemunha 2\\]`': '',
-                '`\\[CPF Testemunha 2\\]`': ''
+                '\\[Nome Testemunha 1\\]': document.getElementById('nomeTestemunha1').value,
+                '\\[CPF Testemunha 1\\]': document.getElementById('cpfTestemunha1').value,
+                '\\[Nome Testemunha 2\\]': document.getElementById('nomeTestemunha2').value,
+                '\\[CPF Testemunha 2\\]': document.getElementById('cpfTestemunha2').value
             };
             for(const placeholder in placeholders){
                 contratoFinal = contratoFinal.replace(new RegExp(placeholder, 'g'), placeholders[placeholder]);
@@ -232,10 +246,13 @@
 
                         const dadosPrestador = prestadorSnap.data();
                         const modeloContrato = await buscarModeloContrato(dadosPrestador.tipoServico);
+                        
+                        // Pré-preenche o contrato sem os dados das testemunhas
                         const contratoPreenchido = preencherContrato(modeloContrato, dadosPrestador);
-
+                        
                         document.getElementById('contratoTitulo').textContent = `Contrato - ${dadosPrestador.razaoSocial}`;
-                        document.getElementById('contratoConteudo').textContent = contratoPreenchido;
+                        // USA innerHTML PARA RENDERIZAR A FORMATAÇÃO
+                        document.getElementById('contratoConteudo').innerHTML = contratoPreenchido;
                         
                         document.getElementById('loadingSpinner').classList.add('hidden');
                         document.getElementById('contratoContainer').classList.remove('hidden');
@@ -251,16 +268,9 @@
 
         // --- LÓGICA DOS BOTÕES DO CONTRATO ---
         document.getElementById('copiarContratoBtn').addEventListener('click', () => {
-            let textoFinal = document.getElementById('contratoConteudo').textContent;
+            // Pega a versão em texto puro do conteúdo, sem tags HTML
+            let textoFinal = document.getElementById('contratoConteudo').innerText;
             
-            const nomeT1 = document.getElementById('nomeTestemunha1').value;
-            const cpfT1 = document.getElementById('cpfTestemunha1').value;
-            const nomeT2 = document.getElementById('nomeTestemunha2').value;
-            const cpfT2 = document.getElementById('cpfTestemunha2').value;
-
-            textoFinal = textoFinal.replace('Nome: \nCPF:', `Nome: ${nomeT1}\nCPF: ${cpfT1}`);
-            textoFinal = textoFinal.replace('Nome: \nCPF:', `Nome: ${nomeT2}\nCPF: ${cpfT2}`);
-
             navigator.clipboard.writeText(textoFinal).then(() => {
                 const statusMsg = document.getElementById('statusMessage');
                 statusMsg.textContent = 'Contrato copiado para a área de transferência!';
@@ -270,20 +280,17 @@
         });
 
         document.getElementById('imprimirContratoBtn').addEventListener('click', () => {
-            let textoFinal = document.getElementById('contratoConteudo').textContent;
+            const dadosPrestador = {}; // Os dados já estão no HTML, só precisamos dos dados das testemunhas
+            const modeloHTML = document.getElementById('contratoConteudo').innerHTML;
 
-            const nomeT1 = document.getElementById('nomeTestemunha1').value;
-            const cpfT1 = document.getElementById('cpfTestemunha1').value;
-            const nomeT2 = document.getElementById('nomeTestemunha2').value;
-            const cpfT2 = document.getElementById('cpfTestemunha2').value;
+            // Preenche os placeholders restantes (testemunhas) antes de imprimir
+            const textoFinal = preencherContrato(modeloHTML, dadosPrestador);
 
-            textoFinal = textoFinal.replace('Nome: \nCPF:', `Nome: ${nomeT1}\nCPF: ${cpfT1}`);
-            textoFinal = textoFinal.replace('Nome: \nCPF:', `Nome: ${nomeT2}\nCPF: ${cpfT2}`);
-
-            const printWindow = window.open('', '', 'height=600,width=800');
+            const printWindow = window.open('', '', 'height=800,width=800');
             printWindow.document.write('<html><head><title>Imprimir Contrato</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;line-height:1.6;} pre{white-space:pre-wrap; font-family:inherit;}</style>');
-            printWindow.document.write('</head><body><pre>' + textoFinal + '</pre></body></html>');
+            printWindow.document.write('<style>body{font-family: Inter, sans-serif; line-height: 1.6;} p{margin-bottom:1em;} h1,h2,h3{font-weight:bold; margin-top:1.2em; margin-bottom:0.5em;}</style>');
+            // Escreve o HTML diretamente no corpo da nova janela para manter a formatação
+            printWindow.document.write('</head><body>' + textoFinal + '</body></html>');
             printWindow.document.close();
             printWindow.print();
         });
