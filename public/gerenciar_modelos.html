@@ -6,15 +6,29 @@
     <title>Gerenciar Modelos de Contrato - Heberlog</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Adicionando o Editor de Texto (Quill.js) -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .loader { border-top-color: #D9242B; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        input:focus, select:focus, textarea:focus { border-color: #D9242B !important; box-shadow: 0 0 0 2px rgba(217, 36, 43, 0.3) !important; }
+        input:focus, select:focus, .ql-container.ql-snow, .ql-toolbar.ql-snow { border-color: #D9242B !important; box-shadow: 0 0 0 2px rgba(217, 36, 43, 0.3) !important; }
         .btn-primary { background-color: #D9242B; color: white; }
         .btn-primary:hover { background-color: #b91c1c; }
         .btn-delete { background-color: #ef4444; color: white; }
         .btn-delete:hover { background-color: #dc2626; }
+        /* Estilo para o container do editor Quill */
+        #editor-container { height: 500px; background-color: white; }
+        .placeholder-btn {
+            background-color: #e0e7ff; color: #3730a3;
+            padding: 4px 8px; margin: 2px; border-radius: 4px;
+            font-size: 0.8rem; font-family: monospace;
+            cursor: pointer; transition: background-color 0.2s;
+        }
+        .placeholder-btn:hover { background-color: #c7d2fe; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -22,13 +36,13 @@
     <!-- Tela de Verificação de Acesso -->
     <div id="authScreen" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex flex-col items-center justify-center z-50">
         <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
-        <p id="authMessage" class="text-white text-lg mt-4">Verificando permissões...</p>
+        <p id="authMessage" class="text-white text-lg mt-4">A verificar permissões...</p>
     </div>
 
     <!-- Conteúdo Principal (visível apenas para admins) -->
     <div id="mainContent" class="hidden">
-        <div class="w-full max-w-6xl mx-auto">
-            <h1 class="text-3xl font-bold text-gray-800 mb-6">Painel de Gerenciamento de Contratos</h1>
+        <div class="w-full max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Painel de Gestão de Contratos</h1>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Coluna de Edição -->
@@ -38,7 +52,7 @@
                     <div class="mb-4">
                         <label for="modeloSelect" class="block text-sm font-medium text-gray-700">Selecione um Modelo para Editar</label>
                         <select id="modeloSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm">
-                            <option value="">-- Carregando modelos... --</option>
+                            <option value="">-- A carregar modelos... --</option>
                         </select>
                     </div>
 
@@ -48,12 +62,13 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="templateTextarea" class="block text-sm font-medium text-gray-700">Conteúdo do Modelo</label>
-                        <textarea id="templateTextarea" rows="20" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 font-mono text-sm" placeholder="Cole aqui o texto do contrato..."></textarea>
+                        <label class="block text-sm font-medium text-gray-700">Conteúdo do Modelo</label>
+                        <!-- O editor Quill será inserido aqui -->
+                        <div id="editor-container" class="mt-1"></div>
                     </div>
                     
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <button id="saveBtn" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md">Salvar Alterações</button>
+                        <button id="saveBtn" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md">Guardar Alterações</button>
                         <button id="deleteBtn" class="w-full sm:w-auto btn-delete font-semibold py-2 px-4 rounded-md hidden">Apagar Modelo</button>
                     </div>
                     <p id="statusMessage" class="mt-3 text-sm text-center"></p>
@@ -68,9 +83,9 @@
                     </div>
                     <div class="bg-blue-50 p-6 rounded-lg shadow-sm">
                         <h3 class="text-lg font-semibold mb-3 text-blue-800">Placeholders Disponíveis</h3>
-                        <p class="text-sm text-gray-600 mb-4">Use estes valores no seu texto. Eles serão substituídos automaticamente pelos dados do prestador.</p>
-                        <div id="placeholdersList" class="text-sm font-mono text-blue-900 space-y-1">
-                            <!-- Lista será preenchida pelo JavaScript -->
+                        <p class="text-sm text-gray-600 mb-4">Clique num botão para inserir o placeholder no texto.</p>
+                        <div id="placeholdersList" class="flex flex-wrap">
+                            <!-- Botões serão preenchidos pelo JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -103,13 +118,28 @@
         const mainContent = document.getElementById('mainContent');
         const modeloSelect = document.getElementById('modeloSelect');
         const modeloIdInput = document.getElementById('modeloIdInput');
-        const templateTextarea = document.getElementById('templateTextarea');
         const saveBtn = document.getElementById('saveBtn');
         const newBtn = document.getElementById('newBtn');
         const deleteBtn = document.getElementById('deleteBtn');
         const statusMessage = document.getElementById('statusMessage');
         const placeholdersList = document.getElementById('placeholdersList');
         
+        // --- INICIALIZAÇÃO DO EDITOR QUILL.JS ---
+        const quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'align': [] }],
+                    ['link'],
+                    ['clean']
+                ]
+            }
+        });
+
+        // --- GERAÇÃO DOS BOTÕES DE PLACEHOLDER ---
         const placeholders = [
             '[Razao Social]', '[CNPJ]', '[Empresa Logradouro]', '[Empresa Numero]', 
             '[Empresa Complemento]', '[Empresa Bairro]', '[Empresa Cidade]', '[Empresa UF]', '[Empresa CEP]',
@@ -118,7 +148,19 @@
             '[Empresario CEP]', '[Valor Diaria]', '[Valor Diaria por Extenso]', '[Data Atual ou Data de Cadastro]',
             '[Nome Testemunha 1]', '[CPF Testemunha 1]', '[Nome Testemunha 2]', '[CPF Testemunha 2]'
         ];
-        placeholdersList.innerHTML = placeholders.map(p => `<div>${p}</div>`).join('');
+        
+        placeholdersList.innerHTML = placeholders.map(p => 
+            `<button class="placeholder-btn" data-placeholder="${p}">${p}</button>`
+        ).join('');
+        
+        placeholdersList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('placeholder-btn')) {
+                const placeholder = e.target.dataset.placeholder;
+                const range = quill.getSelection(true); // Pega a posição atual do cursor
+                quill.insertText(range.index, placeholder, 'user');
+            }
+        });
+
 
         // --- LÓGICA DE AUTENTICAÇÃO E AUTORIZAÇÃO ---
         onAuthStateChanged(auth, async (user) => {
@@ -141,12 +183,12 @@
                     authScreen.querySelector('.loader').classList.add('hidden');
                 }
             } else {
-                authMessage.textContent = "Por favor, faça o login na página principal para acessar esta área.";
+                authMessage.textContent = "Por favor, faça o login na página principal para aceder a esta área.";
                 authScreen.querySelector('.loader').classList.add('hidden');
             }
         });
 
-        // --- FUNÇÕES DE GERENCIAMENTO ---
+        // --- FUNÇÕES DE GESTÃO ---
         async function carregarModelos() {
             try {
                 const modelosRef = collection(db, "modelos_contrato");
@@ -168,9 +210,9 @@
             modeloSelect.value = '';
             modeloIdInput.value = '';
             modeloIdInput.disabled = false;
-            templateTextarea.value = '';
+            quill.root.innerHTML = ''; // Limpa o editor Quill
             deleteBtn.classList.add('hidden');
-            saveBtn.textContent = 'Salvar Novo Modelo';
+            saveBtn.textContent = 'Guardar Novo Modelo';
         }
 
         function showStatus(message, type = 'success') {
@@ -193,9 +235,9 @@
                     const data = docSnap.data();
                     modeloIdInput.value = docSnap.id;
                     modeloIdInput.disabled = true;
-                    templateTextarea.value = data.template || '';
+                    quill.root.innerHTML = data.template || ''; // Carrega o HTML no editor
                     deleteBtn.classList.remove('hidden');
-                    saveBtn.textContent = 'Salvar Alterações';
+                    saveBtn.textContent = 'Guardar Alterações';
                 }
             } catch (error) {
                 showStatus(`Erro ao carregar o modelo: ${error.message}`, 'error');
@@ -206,9 +248,9 @@
 
         saveBtn.addEventListener('click', async () => {
             const modeloId = modeloIdInput.value.trim().toLowerCase().replace(/ /g, '_');
-            const templateTexto = templateTextarea.value;
+            const templateHTML = quill.root.innerHTML; // Pega o conteúdo como HTML
 
-            if (!modeloId || !templateTexto) {
+            if (!modeloId || templateHTML === '<p><br></p>') { // Verifica se o editor está vazio
                 showStatus('O ID e o conteúdo do modelo não podem estar vazios.', 'error');
                 return;
             }
@@ -220,15 +262,15 @@
             
             try {
                 const modeloRef = doc(db, "modelos_contrato", modeloId);
-                await setDoc(modeloRef, { template: templateTexto });
-                showStatus('Modelo salvo com sucesso!', 'success');
+                await setDoc(modeloRef, { template: templateHTML }); // Guarda o HTML no Firestore
+                showStatus('Modelo guardado com sucesso!', 'success');
                 await carregarModelos();
                 modeloSelect.value = modeloId;
                 modeloIdInput.disabled = true;
                 deleteBtn.classList.remove('hidden');
-                saveBtn.textContent = 'Salvar Alterações';
+                saveBtn.textContent = 'Guardar Alterações';
             } catch (error) {
-                showStatus(`Erro ao salvar: ${error.message}`, 'error');
+                showStatus(`Erro ao guardar: ${error.message}`, 'error');
             }
         });
 
@@ -236,7 +278,7 @@
             const modeloId = modeloIdInput.value;
             if (!modeloId) return;
 
-            if (confirm(`Tem certeza de que deseja apagar o modelo "${modeloId}"? Esta ação não pode ser desfeita.`)) {
+            if (confirm(`Tem a certeza de que deseja apagar o modelo "${modeloId}"? Esta ação não pode ser desfeita.`)) {
                 try {
                     await deleteDoc(doc(db, "modelos_contrato", modeloId));
                     showStatus(`Modelo "${modeloId}" apagado com sucesso.`, 'success');
