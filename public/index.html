@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Prestadores de Serviço - Heberlog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; 
+        }
+        .loader {
+            border-top-color: #D9242B; 
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @-webkit-keyframes spinner {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #visualizacaoDados table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        #visualizacaoDados th, #visualizacaoDados td {
+            border: 1px solid #e2e8f0; 
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        #visualizacaoDados th {
+            background-color: #f1f5f9; 
+            color: #334155; 
+            font-weight: 600;
+        }
+        #visualizacaoDados tr:nth-child(even) {
+            background-color: #fdfdfe; 
+        }
+         #visualizacaoDados tr:hover {
+            background-color: #f0f4f8; 
+        }
+        .edit-button { 
+            color: #D9242B; 
+            background-color: transparent;
+            border: none;
+            padding: 6px 12px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border-radius: 0.375rem; 
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+            font-weight: 500;
+        }
+        .edit-button:hover {
+            background-color: #fee2e2; 
+            color: #b91c1c; 
+        }
+        .bg-heberlog-red { background-color: #D9242B; }
+        .hover\:bg-heberlog-red-dark:hover { background-color: #b91c1c; } 
+        .text-heberlog-red { color: #D9242B; }
+        .hover\:text-heberlog-red-dark:hover { color: #b91c1c; }
+        .focus\:ring-heberlog-red:focus { --tw-ring-color: #D9242B; }
+        .border-heberlog-red { border-color: #D9242B; }
+
+        input:focus, select:focus, input[type="checkbox"]:focus {
+            border-color: #D9242B !important; 
+            box-shadow: 0 0 0 2px rgba(217, 36, 43, 0.3) !important; 
+        }
+        
+        .btn-primary {
+            background-color: #D9242B; 
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #b91c1c; 
+        }
+        .focus\:ring-btn-primary:focus {
+            --tw-ring-color: #D9242B;
+        }
+         .btn-register {
+            background-color: #16a34a; 
+            color: white;
+        }
+        .btn-register:hover {
+            background-color: #15803d; 
+        }
+         .focus\:ring-btn-register:focus {
+            --tw-ring-color: #16a34a;
+        }
+        .btn-logout {
+            background-color: #dc2626; 
+            color: white;
+        }
+        .btn-logout:hover {
+            background-color: #b91c1c; 
+        }
+        .btn-secondary-view {
+            background-color: #475569; 
+            color: white;
+        }
+        .btn-secondary-view:hover {
+            background-color: #334155; 
+        }
+        .focus\:ring-secondary-view:focus {
+            --tw-ring-color: #475569;
+        }
+        .btn-secondary-export {
+            background-color: #64748b; 
+            color: white;
+        }
+        .btn-secondary-export:hover {
+            background-color: #475569; 
+        }
+         .focus\:ring-secondary-export:focus {
+            --tw-ring-color: #64748b;
+        }
+        .login-title-customized {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700; 
+            font-size: 2.8rem; 
+            text-align: center;
+            margin-bottom: 1.5rem; 
+            letter-spacing: 0.05em; 
+        }
+        .login-title-customized .log-part {
+            color: #D9242B; 
+        }
+        .login-title-customized .in-part {
+            color: #9E9FA1; 
+        }
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #374151;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        #criticalErrorFallback { 
+            background-color: darkred;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10000;
+            display: none; 
+        }
+        .custom-checkbox:checked {
+            background-color: #D9242B;
+            border-color: #D9242B;
+        }
+        .cep-status {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div id="criticalErrorFallback"></div>
+
+    <!-- Seção de Autenticação -->
+    <div id="authSection" class="w-full max-w-md">
+        <div id="loginFormContainer" class="bg-white p-8 rounded-lg shadow-lg mb-6">
+            <h2 class="login-title-customized mb-6">
+                <span class="log-part">Log</span><span class="in-part">in</span>
+            </h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="loginEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="loginEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900">
+                </div>
+                <div class="mb-6">
+                    <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <input type="password" id="loginPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900">
+                </div>
+                <button type="submit" class="w-full btn-primary font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-btn-primary focus:ring-offset-2">Entrar</button>
+            </form>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Não tem uma conta? <button id="showRegisterBtn" class="font-medium text-heberlog-red hover:text-heberlog-red-dark">Registre-se</button>
+            </p>
+        </div>
+
+        <div id="registerFormContainer" class="bg-white p-8 rounded-lg shadow-lg mb-6 hidden">
+            <h2 class="text-2xl font-semibold text-center text-gray-800 mb-6">Registrar Nova Conta</h2>
+            <form id="registerForm">
+                <div class="mb-4">
+                    <label for="registerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="registerEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900">
+                </div>
+                <div class="mb-4">
+                    <label for="registerPassword" class="block text-sm font-medium text-gray-700 mb-1">Senha (mínimo 6 caracteres)</label>
+                    <input type="password" id="registerPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900">
+                </div>
+                <div class="mb-6">
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+                    <input type="password" id="confirmPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900">
+                </div>
+                <button type="submit" class="w-full btn-register font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-btn-register focus:ring-offset-2">Registrar</button>
+            </form>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Já tem uma conta? <button id="showLoginBtn" class="font-medium text-heberlog-red hover:text-heberlog-red-dark">Faça Login</button>
+            </p>
+        </div>
+         <div id="authStatusMessage" class="mb-4 text-center p-3 rounded-md text-sm hidden"></div>
+    </div>
+
+    <!-- Seção Principal da Aplicação -->
+    <div id="appSection" class="w-full hidden"> 
+        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl mb-8 mx-auto"> 
+            <div class="flex justify-between items-center mb-6">
+                <h1 id="formTitle" class="text-2xl font-semibold text-gray-800">Cadastro de Prestador de Serviço</h1>
+                <button id="logoutBtn" class="btn-logout font-semibold py-2 px-3 rounded-md shadow-sm text-sm">Logout</button>
+            </div>
+            <p class="text-xs text-gray-600 mb-2">Logado como: <span id="userEmailDisplay" class="font-mono"></span></p>
+            <p class="text-xs text-gray-500 mb-4">User ID: <span id="userIdDisplay" class="font-mono">Carregando...</span></p>
+
+            <div id="statusMessage" class="mb-4 text-center p-3 rounded-md text-sm hidden"></div>
+
+            <form id="providerForm">
+                <input type="hidden" id="editingDocId" name="editingDocId">
+
+                <h3 class="section-title">Dados do Sócio e Empresa</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div class="mb-4">
+                        <label for="nomeSocio" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo do Sócio</label>
+                        <input type="text" id="nomeSocio" name="nomeSocio" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="razaoSocial" class="block text-sm font-medium text-gray-700 mb-1">Razão Social</label>
+                        <input type="text" id="razaoSocial" name="razaoSocial" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div class="mb-4">
+                        <label for="rgSocio" class="block text-sm font-medium text-gray-700 mb-1">RG do Sócio</label>
+                        <input type="text" id="rgSocio" name="rgSocio" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="00.000.000-0">
+                    </div>
+                    <div class="mb-4">
+                        <label for="cpfSocio" class="block text-sm font-medium text-gray-700 mb-1">CPF do Sócio</label>
+                        <input type="text" id="cpfSocio" name="cpfSocio" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="000.000.000-00">
+                        <p id="cpfError" class="text-red-500 text-xs mt-1 hidden">CPF inválido.</p>
+                    </div>
+                </div>
+                <div class="mb-4"> 
+                    <label for="cnpj" class="block text-sm font-medium text-gray-700 mb-1">CNPJ da Empresa (Prestador)</label>
+                    <input type="text" id="cnpj" name="cnpj" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="00.000.000/0000-00">
+                    <p id="cnpjError" class="text-red-500 text-xs mt-1 hidden">CNPJ inválido.</p>
+                </div>
+
+                <h3 class="section-title">Endereço da Empresa</h3>
+                <div class="mb-4">
+                    <label for="empresaCEP" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                    <input type="text" id="empresaCEP" name="empresaCEP" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="00000-000">
+                    <p id="empresaCepStatus" class="cep-status"></p>
+                </div>
+                <div class="mb-4">
+                    <label for="empresaLogradouro" class="block text-sm font-medium text-gray-700 mb-1">Logradouro</label>
+                    <input type="text" id="empresaLogradouro" name="empresaLogradouro" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+                    <div class="mb-4">
+                        <label for="empresaNumero" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                        <input type="text" id="empresaNumero" name="empresaNumero" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="mb-4 md:col-span-2">
+                        <label for="empresaComplemento" class="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                        <input type="text" id="empresaComplemento" name="empresaComplemento" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+                    <div class="mb-4">
+                        <label for="empresaBairro" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                        <input type="text" id="empresaBairro" name="empresaBairro" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="empresaCidade" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                        <input type="text" id="empresaCidade" name="empresaCidade" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="empresaUF" class="block text-sm font-medium text-gray-700 mb-1">UF</label>
+                        <input type="text" id="empresaUF" name="empresaUF" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" maxlength="2">
+                    </div>
+                </div>
+                
+                <div class="mt-6 mb-2">
+                    <label for="enderecoEmpresarioIgualEmpresa" class="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+                        <input type="checkbox" id="enderecoEmpresarioIgualEmpresa" name="enderecoEmpresarioIgualEmpresa" checked class="h-4 w-4 text-heberlog-red border-gray-300 rounded custom-checkbox mr-2">
+                        O endereço do empresário é o mesmo da empresa?
+                    </label>
+                </div>
+
+                <div id="secaoEnderecoEmpresario"> 
+                    <h3 class="section-title">Endereço do Empresário</h3>
+                    <div class="mb-4">
+                        <label for="empresarioCEP" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                        <input type="text" id="empresarioCEP" name="empresarioCEP" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="00000-000">
+                         <p id="empresarioCepStatus" class="cep-status"></p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="empresarioLogradouro" class="block text-sm font-medium text-gray-700 mb-1">Logradouro</label>
+                        <input type="text" id="empresarioLogradouro" name="empresarioLogradouro" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+                        <div class="mb-4">
+                            <label for="empresarioNumero" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                            <input type="text" id="empresarioNumero" name="empresarioNumero" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div class="mb-4 md:col-span-2">
+                            <label for="empresarioComplemento" class="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                            <input type="text" id="empresarioComplemento" name="empresarioComplemento" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+                        <div class="mb-4">
+                            <label for="empresarioBairro" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                            <input type="text" id="empresarioBairro" name="empresarioBairro" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div class="mb-4">
+                            <label for="empresarioCidade" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                            <input type="text" id="empresarioCidade" name="empresarioCidade" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div class="mb-4">
+                            <label for="empresarioUF" class="block text-sm font-medium text-gray-700 mb-1">UF</label>
+                            <input type="text" id="empresarioUF" name="empresarioUF" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" maxlength="2">
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Dados do Serviço</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div class="mb-4">
+                        <label for="valorDiaria" class="block text-sm font-medium text-gray-700 mb-1">Valor da Diária (R$)</label>
+                        <input type="text" id="valorDiaria" name="valorDiaria" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="0,00">
+                        <p id="valorDiariaError" class="text-red-500 text-xs mt-1 hidden">Valor inválido.</p>
+                    </div>
+                    <div class="mb-4"> 
+                        <label for="tipoServico" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Serviço</label>
+                        <select id="tipoServico" name="tipoServico" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                            <option value="" disabled selected>Selecione...</option>
+                            <option value="Ajudante">Ajudante</option>
+                            <option value="Motorista">Motorista</option>
+                            <option value="Conferente">Conferente</option>
+                            <option value="Manobrista">Manobrista</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Coordenador">Coordenador</option>
+                            <option value="Supervisor">Supervisor</option>
+                            <option value="Gestor">Gestor</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div class="mb-4">
+                        <label for="operacao" class="block text-sm font-medium text-gray-700 mb-1">Operação</label>
+                        <select id="operacao" name="operacao" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                            <option value="" disabled selected>Selecione...</option>
+                            <option value="Unilever SP">Unilever SP</option>
+                            <option value="Unilever RJ">Unilever RJ</option>
+                            <option value="Froneri SP">Froneri SP</option>
+                            <option value="Froneri BA">Froneri BA</option>
+                            <option value="Matriz">Matriz</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="statusContainer" class="mb-4 hidden">
+                    <label for="statusPrestador" class="block text-sm font-medium text-gray-700 mb-1">Status do Prestador</label>
+                    <select id="statusPrestador" name="statusPrestador" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 mb-3 mt-6">
+                     <button type="submit" id="btnSubmitForm" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-btn-primary focus:ring-offset-2">Cadastrar</button>
+                    <button type="button" id="btnCancelarEdicao" class="w-full sm:w-auto flex-grow bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 hidden">Cancelar Edição</button>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button type="button" id="btnVisualizarDados" class="w-full sm:w-auto flex-grow btn-secondary-view font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-secondary-view focus:ring-offset-2">Visualizar Cadastros</button>
+                    <button type="button" id="btnExportarExcel" class="w-full sm:w-auto flex-grow btn-secondary-export font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-secondary-export focus:ring-offset-2">Exportar para Excel</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="visualizacaoDadosContainer" class="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl hidden mb-8 mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Prestadores Cadastrados</h2>
+                <button id="btnFecharVisualizacao" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="visualizacaoDados" class="overflow-x-auto"></div>
+            <p id="visualizacaoStatus" class="text-sm text-gray-600 mt-2"></p>
+        </div>
+    </div>
+
+    <div id="loadingSpinner" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            serverTimestamp, 
+            setLogLevel, 
+            onSnapshot, 
+            query as firestoreQuery, 
+            getDocs,
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAH6hH87QGaKU1k1_FH2yYAXqebvx2w890", 
+            authDomain: "cad-prestadores---heberlog.firebaseapp.com", 
+            projectId: "cad-prestadores---heberlog", 
+            storageBucket: "cad-prestadores---heberlog.appspot.com", 
+            messagingSenderId: "1006809562464", 
+            appId: "1:1006809562464:web:205bab4ea5e041a362f205", 
+            measurementId: "G-1B6Z1CJKPN" 
+        };
+
+        let app;
+        let authInstance; 
+        let db;
+        const criticalErrorFallbackDiv = document.getElementById('criticalErrorFallback');
+
+        try {
+            app = initializeApp(firebaseConfig);
+            authInstance = getAuth(app);
+            db = getFirestore(app);
+            setLogLevel('debug'); 
+            console.log("[DEBUG] Firebase (Auth, Firestore) inicializado com sucesso.");
+        } catch (error) {
+            console.error("[DEBUG] Erro CRÍTICO ao inicializar o Firebase:", error);
+            const authStatusMsgEl = document.getElementById('authStatusMessage');
+            if (authStatusMsgEl) {
+                authStatusMsgEl.textContent = "Erro crítico ao conectar com o Firebase.";
+                authStatusMsgEl.className = 'mb-4 text-center p-3 rounded-md text-sm bg-red-100 text-red-700';
+                authStatusMsgEl.classList.remove('hidden');
+            }
+            if(criticalErrorFallbackDiv) {
+                criticalErrorFallbackDiv.textContent = 'Erro crítico ao conectar com o Firebase. Verifique o console.';
+                criticalErrorFallbackDiv.style.display = 'block';
+            }
+        }
+        
+        const firestoreAppIdPath = firebaseConfig.appId; 
+        let currentUserId = null;
+        let currentUserEmail = null;
+        let unsubscribeSnapshot = null;
+
+        const authSection = document.getElementById('authSection');
+        const loginFormContainer = document.getElementById('loginFormContainer');
+        const registerFormContainer = document.getElementById('registerFormContainer');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const showRegisterBtn = document.getElementById('showRegisterBtn');
+        const showLoginBtn = document.getElementById('showLoginBtn');
+        const authStatusMessage = document.getElementById('authStatusMessage');
+        const appSection = document.getElementById('appSection');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userEmailDisplay = document.getElementById('userEmailDisplay');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const providerForm = document.getElementById('providerForm');
+        const formTitle = document.getElementById('formTitle');
+        const statusMessage = document.getElementById('statusMessage'); 
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const editingDocIdInput = document.getElementById('editingDocId');
+        const btnSubmitForm = document.getElementById('btnSubmitForm');
+        const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
+        const btnVisualizarDados = document.getElementById('btnVisualizarDados');
+        const btnExportarExcel = document.getElementById('btnExportarExcel'); 
+        const visualizacaoDadosContainer = document.getElementById('visualizacaoDadosContainer');
+        const visualizacaoDadosDiv = document.getElementById('visualizacaoDados');
+        const visualizacaoStatus = document.getElementById('visualizacaoStatus');
+        const btnFecharVisualizacao = document.getElementById('btnFecharVisualizacao');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusPrestadorSelect = document.getElementById('statusPrestador');
+        
+        const nomeSocioInput = document.getElementById('nomeSocio');
+        const razaoSocialInput = document.getElementById('razaoSocial');
+        const rgSocioInput = document.getElementById('rgSocio');
+        const cpfSocioInput = document.getElementById('cpfSocio');
+        const cpfError = document.getElementById('cpfError');
+        
+        const empresaCEPInput = document.getElementById('empresaCEP');
+        const empresaLogradouroInput = document.getElementById('empresaLogradouro');
+        const empresaNumeroInput = document.getElementById('empresaNumero');
+        const empresaComplementoInput = document.getElementById('empresaComplemento');
+        const empresaBairroInput = document.getElementById('empresaBairro');
+        const empresaCidadeInput = document.getElementById('empresaCidade');
+        const empresaUFInput = document.getElementById('empresaUF');
+        const empresaCepStatus = document.getElementById('empresaCepStatus');
+        
+        const enderecoEmpresarioIgualEmpresaCheckbox = document.getElementById('enderecoEmpresarioIgualEmpresa');
+        const secaoEnderecoEmpresarioDiv = document.getElementById('secaoEnderecoEmpresario');
+
+        const empresarioCEPInput = document.getElementById('empresarioCEP');
+        const empresarioLogradouroInput = document.getElementById('empresarioLogradouro');
+        const empresarioNumeroInput = document.getElementById('empresarioNumero');
+        const empresarioComplementoInput = document.getElementById('empresarioComplemento');
+        const empresarioBairroInput = document.getElementById('empresarioBairro');
+        const empresarioCidadeInput = document.getElementById('empresarioCidade');
+        const empresarioUFInput = document.getElementById('empresarioUF');
+        const empresarioCepStatus = document.getElementById('empresarioCepStatus');
+        
+        const cnpjInput = document.getElementById('cnpj'); 
+        const cnpjError = document.getElementById('cnpjError');
+        const valorDiariaInput = document.getElementById('valorDiaria');
+        const valorDiariaError = document.getElementById('valorDiariaError');
+        const tipoServicoSelect = document.getElementById('tipoServico');
+        const operacaoSelect = document.getElementById('operacao');
+
+        function checkDOMElements() {
+            const elements = { authSection, loginFormContainer, registerFormContainer, loginForm, registerForm, showRegisterBtn, showLoginBtn, authStatusMessage, appSection, logoutBtn, userEmailDisplay, userIdDisplay, providerForm, formTitle, statusMessage, loadingSpinner, editingDocIdInput, btnSubmitForm, btnCancelarEdicao, btnVisualizarDados, btnExportarExcel, visualizacaoDadosContainer, visualizacaoDadosDiv, visualizacaoStatus, btnFecharVisualizacao, statusContainer, statusPrestadorSelect, nomeSocioInput, razaoSocialInput, rgSocioInput, cpfSocioInput, cpfError, empresaCEPInput, empresaLogradouroInput, empresaNumeroInput, empresaComplementoInput, empresaBairroInput, empresaCidadeInput, empresaUFInput, empresaCepStatus, enderecoEmpresarioIgualEmpresaCheckbox, secaoEnderecoEmpresarioDiv, empresarioCEPInput, empresarioLogradouroInput, empresarioNumeroInput, empresarioComplementoInput, empresarioBairroInput, empresarioCidadeInput, empresarioUFInput, empresarioCepStatus, cnpjInput, cnpjError, valorDiariaInput, valorDiariaError, tipoServicoSelect, operacaoSelect };
+            for (const key in elements) {
+                if (!elements[key]) {
+                    console.error(`Erro Crítico: Elemento DOM '${key}' não encontrado.`);
+                    if (criticalErrorFallbackDiv) {
+                        criticalErrorFallbackDiv.textContent = `Erro: Componente da página (${key}) não encontrado.`;
+                        criticalErrorFallbackDiv.style.display = 'block';
+                    }
+                    return false; 
+                }
+            }
+            return true; 
+        }
+
+        if (db && checkDOMElements()) { 
+            function showAuthSection() { authSection.style.display = 'block'; appSection.classList.add('hidden'); appSection.style.display = 'none'; visualizacaoDadosContainer.classList.add('hidden'); loginFormContainer.style.display = 'block'; registerFormContainer.classList.add('hidden'); registerFormContainer.style.display = 'none'; authStatusMessage.classList.add('hidden');  }
+            function showAppSection() { authSection.style.display = 'none'; appSection.classList.remove('hidden'); appSection.style.display = 'block'; loginForm.reset();  registerForm.reset();  authStatusMessage.classList.add('hidden'); }
+            function showAuthStatusMessage(message, type = 'success') { authStatusMessage.textContent = message; authStatusMessage.className = `mb-4 text-center p-3 rounded-md text-sm ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`; authStatusMessage.classList.remove('hidden'); if (type === 'success' || type === 'error') {  setTimeout(() => { if(authStatusMessage.textContent === message) {  authStatusMessage.classList.add('hidden'); } }, type === 'success' ? 5000 : 8000);  } }
+            showRegisterBtn.addEventListener('click', () => { loginFormContainer.style.display = 'none'; registerFormContainer.classList.remove('hidden'); registerFormContainer.style.display = 'block'; authStatusMessage.classList.add('hidden'); loginForm.reset(); });
+            showLoginBtn.addEventListener('click', () => { registerFormContainer.classList.add('hidden'); registerFormContainer.style.display = 'none'; loginFormContainer.style.display = 'block'; authStatusMessage.classList.add('hidden'); registerForm.reset(); });
+            function showLoading(isLoading) { loadingSpinner.classList.toggle('hidden', !isLoading); }
+            function showStatusMessage(message, type = 'success', duration = 5000) { statusMessage.textContent = message; statusMessage.className = `mb-4 text-center p-3 rounded-md text-sm ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`; statusMessage.classList.remove('hidden');  if(duration > 0) {  setTimeout(() => { if(statusMessage.textContent === message) {  statusMessage.classList.add('hidden'); } }, duration); } }
+            
+            onAuthStateChanged(authInstance, (user) => { 
+                if (user) {
+                    currentUserId = user.uid; currentUserEmail = user.email; userIdDisplay.textContent = currentUserId; userEmailDisplay.textContent = currentUserEmail;
+                    btnVisualizarDados.disabled = false; btnExportarExcel.disabled = false; 
+                    showAppSection();
+                } else {
+                    currentUserId = null; currentUserEmail = null; userIdDisplay.textContent = 'N/A'; userEmailDisplay.textContent = 'N/A';
+                    btnVisualizarDados.disabled = true; btnExportarExcel.disabled = true; 
+                    if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+                    showAuthSection();
+                }
+            });
+            registerForm.addEventListener('submit', async (e) => { e.preventDefault(); showLoading(true); authStatusMessage.classList.add('hidden'); const email = document.getElementById('registerEmail').value; const password = document.getElementById('registerPassword').value; const confirmPassword = document.getElementById('confirmPassword').value; if (password !== confirmPassword) { showAuthStatusMessage("As senhas não coincidem.", "error"); showLoading(false); return; } if (password.length < 6) { showAuthStatusMessage("A senha deve ter pelo menos 6 caracteres.", "error"); showLoading(false); return; } try { await createUserWithEmailAndPassword(authInstance, email, password); showAuthStatusMessage("Usuário registrado com sucesso! Redirecionando...", "success"); } catch (error) { let friendlyMessage = `Erro ao registrar: ${error.message} (Código: ${error.code})`; if (error.code === 'auth/email-already-in-use') { friendlyMessage = "Este email já está cadastrado."; } else if (error.code === 'auth/weak-password') { friendlyMessage = "A senha é muito fraca."; } else if (error.code === 'auth/invalid-email') { friendlyMessage = "O formato do email é inválido."; } showAuthStatusMessage(friendlyMessage, "error"); } finally { showLoading(false); } });
+            loginForm.addEventListener('submit', async (e) => { e.preventDefault(); showLoading(true); authStatusMessage.classList.add('hidden'); const email = document.getElementById('loginEmail').value; const password = document.getElementById('loginPassword').value; try { await signInWithEmailAndPassword(authInstance, email, password); } catch (error) { let friendlyMessage = `Erro ao fazer login: ${error.message} (Código: ${error.code})`; if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') { friendlyMessage = "Email ou senha inválidos."; } else if (error.code === 'auth/invalid-email') { friendlyMessage = "O formato do email é inválido."; } else if (error.code === 'auth/api-key-not-valid') { friendlyMessage = "Erro: Chave da API do Firebase inválida."; } showAuthStatusMessage(friendlyMessage, "error"); } finally { showLoading(false); } });
+            logoutBtn.addEventListener('click', async () => { showLoading(true); try { await signOut(authInstance); resetFormulario(); visualizacaoDadosContainer.classList.add('hidden'); } catch (error) { showStatusMessage(`Erro ao fazer logout: ${error.message}`, "error", 0); } finally { showLoading(false); } });
+
+            function formatCnpj(cnpj) { const cleaned = cnpj.replace(/\D/g, ''); if (cleaned.length <= 2) return cleaned; if (cleaned.length <= 5) return `${cleaned.slice(0, 2)}.${cleaned.slice(2)}`; if (cleaned.length <= 8) return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5)}`; if (cleaned.length <= 12) return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8)}`; return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8, 12)}-${cleaned.slice(12, 14)}`; }
+            cnpjInput.addEventListener('input', (e) => { e.target.value = formatCnpj(e.target.value); validateCnpj(e.target.value); });
+            function validateCnpj(cnpj) { cnpj = cnpj.replace(/[^\d]+/g, ''); if (cnpj === '') { cnpjError.classList.add('hidden'); return true; } if (cnpj.length !== 14) { cnpjError.textContent = 'CNPJ deve conter 14 dígitos.'; cnpjError.classList.remove('hidden'); return false; } if (/^(\d)\1+$/.test(cnpj)) { cnpjError.textContent = 'CNPJ inválido (dígitos repetidos).'; cnpjError.classList.remove('hidden'); return false; } let tamanho = cnpj.length - 2; let numeros = cnpj.substring(0, tamanho); let digitos = cnpj.substring(tamanho); let soma = 0; let pos = tamanho - 7; for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; } let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11; if (resultado != digitos.charAt(0)) { cnpjError.textContent = 'CNPJ inválido (dígito verificador 1 incorreto).'; cnpjError.classList.remove('hidden'); return false; } tamanho = tamanho + 1; numeros = cnpj.substring(0, tamanho); soma = 0; pos = tamanho - 7; for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; } resultado = soma % 11 < 2 ? 0 : 11 - soma % 11; if (resultado != digitos.charAt(1)) { cnpjError.textContent = 'CNPJ inválido (dígito verificador 2 incorreto).'; cnpjError.classList.remove('hidden'); return false; } cnpjError.classList.add('hidden'); return true; }
+            valorDiariaInput.addEventListener('input', (e) => { let value = e.target.value.replace(/\D/g, ''); if (value === "") { e.target.value = ""; validateValorDiaria(e.target.value); return; } value = (parseInt(value, 10) / 100).toFixed(2).toString().replace('.', ','); e.target.value = value; validateValorDiaria(e.target.value); });
+            function validateValorDiaria(valor) { const cleanedValor = valor.replace(/\D/g, ''); if (valor === '' || cleanedValor === '') { valorDiariaError.classList.add('hidden'); return true; } const numericValue = parseFloat(valor.replace('.', '').replace(',', '.')); if (isNaN(numericValue) || numericValue <= 0) { valorDiariaError.textContent = 'Valor da diária deve ser positivo.'; valorDiariaError.classList.remove('hidden'); return false; } valorDiariaError.classList.add('hidden'); return true; }
+            
+            function formatCPF(cpf) { let v = cpf.replace(/\D/g, "").slice(0, 11); if (v.length > 9) { v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"); } else if (v.length > 6) { v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3"); } else if (v.length > 3) { v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2"); } return v; }
+            cpfSocioInput.addEventListener('input', (e) => { e.target.value = formatCPF(e.target.value); validateCPF(e.target.value); });
+            function validateCPF(cpf) { cpf = String(cpf).replace(/[^\d]+/g, ''); cpfError.classList.add('hidden'); if (cpf === '') return true; if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) { cpfError.textContent = 'CPF inválido.'; cpfError.classList.remove('hidden'); return false; } let sum = 0; let remainder; for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i - 1, i)) * (11 - i); remainder = (sum * 10) % 11; if ((remainder === 10) || (remainder === 11)) remainder = 0; if (remainder !== parseInt(cpf.substring(9, 10))) { cpfError.textContent = 'CPF inválido.'; cpfError.classList.remove('hidden'); return false; } sum = 0; for (let i = 1; i <= 10; i++) sum = sum + parseInt(cpf.substring(i - 1, i)) * (12 - i); remainder = (sum * 10) % 11; if ((remainder === 10) || (remainder === 11)) remainder = 0; if (remainder !== parseInt(cpf.substring(10, 11))) { cpfError.textContent = 'CPF inválido.'; cpfError.classList.remove('hidden'); return false; } return true; }
+            function formatRG(rg) { return rg.replace(/[^\d.-]/g, "").slice(0, 15); } 
+            rgSocioInput.addEventListener('input', (e) => { e.target.value = formatRG(e.target.value); });
+            
+            function formatCEP(cep) { let v = cep.replace(/\D/g, "").slice(0, 8); if (v.length > 5) { v = v.replace(/(\d{5})(\d)/, "$1-$2"); } return v; }
+            
+            async function buscarCEP(cepValue, prefix) {
+                const cep = cepValue.replace(/\D/g, '');
+                const statusElement = document.getElementById(`${prefix}CepStatus`);
+                if (!statusElement) return;
+                statusElement.textContent = '';
+                if (cep.length !== 8) { return; }
+                statusElement.textContent = 'Buscando...';
+                statusElement.className = 'cep-status text-gray-500';
+                showLoading(true);
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    if (!response.ok) throw new Error(`Erro na requisição: ${response.status}`);
+                    const data = await response.json();
+                    if (data.erro) {
+                        statusElement.textContent = 'CEP não encontrado.';
+                        statusElement.className = 'cep-status text-red-500';
+                    } else {
+                        document.getElementById(`${prefix}Logradouro`).value = data.logradouro || '';
+                        document.getElementById(`${prefix}Bairro`).value = data.bairro || '';
+                        document.getElementById(`${prefix}Cidade`).value = data.localidade || '';
+                        document.getElementById(`${prefix}UF`).value = data.uf || '';
+                        statusElement.textContent = 'CEP encontrado!';
+                        statusElement.className = 'cep-status text-green-500';
+                        document.getElementById(`${prefix}Numero`).focus();
+                    }
+                } catch (error) {
+                    statusElement.textContent = 'Erro ao buscar CEP.';
+                    statusElement.className = 'cep-status text-red-500';
+                } finally {
+                    showLoading(false);
+                    setTimeout(() => { if(statusElement.textContent !== 'CEP não encontrado.') statusElement.textContent = ''; }, 3000);
+                }
+            }
+
+            empresaCEPInput.addEventListener('input', (e) => { e.target.value = formatCEP(e.target.value); });
+            empresaCEPInput.addEventListener('blur', (e) => { buscarCEP(e.target.value, 'empresa'); });
+            empresarioCEPInput.addEventListener('input', (e) => { e.target.value = formatCEP(e.target.value); });
+            empresarioCEPInput.addEventListener('blur', (e) => { buscarCEP(e.target.value, 'empresario'); });
+            
+            function toggleEnderecoEmpresarioSecao() {
+                if (enderecoEmpresarioIgualEmpresaCheckbox.checked) {
+                    secaoEnderecoEmpresarioDiv.classList.add('hidden');
+                } else {
+                    secaoEnderecoEmpresarioDiv.classList.remove('hidden');
+                }
+            }
+            enderecoEmpresarioIgualEmpresaCheckbox.addEventListener('change', toggleEnderecoEmpresarioSecao);
+            
+            function resetFormulario() {
+                providerForm.reset(); 
+                editingDocIdInput.value = ''; 
+                formTitle.textContent = 'Cadastro de Prestador de Serviço';
+                btnSubmitForm.textContent = 'Cadastrar'; 
+                btnSubmitForm.classList.remove('bg-green-600', 'hover:bg-green-700', 'focus:ring-green-500'); 
+                btnSubmitForm.classList.add('btn-primary', 'focus:ring-btn-primary'); 
+                btnCancelarEdicao.classList.add('hidden'); 
+                cnpjError.classList.add('hidden'); 
+                valorDiariaError.classList.add('hidden'); 
+                cpfError.classList.add('hidden'); 
+                if(empresaCepStatus) empresaCepStatus.textContent = '';
+                if(empresarioCepStatus) empresarioCepStatus.textContent = '';
+                
+                enderecoEmpresarioIgualEmpresaCheckbox.checked = true;
+                toggleEnderecoEmpresarioSecao();
+                
+                statusMessage.classList.add('hidden');
+                if (statusPrestadorSelect) statusPrestadorSelect.value = 'ativo'; 
+                if (statusContainer) statusContainer.classList.add('hidden');
+            }
+            btnCancelarEdicao.addEventListener('click', () => { resetFormulario(); window.scrollTo({ top: appSection.offsetTop - 20, behavior: 'smooth' }); });
+            
+            providerForm.addEventListener('submit', async (event) => {
+                event.preventDefault(); showLoading(true); statusMessage.classList.add('hidden'); 
+                if (!currentUserId) { showStatusMessage("Usuário não autenticado.", "error", 0); showLoading(false); return; }
+                
+                const dataToSave = {
+                    nomeSocio: nomeSocioInput.value.trim(), 
+                    razaoSocial: razaoSocialInput.value.trim(), 
+                    rgSocio: rgSocioInput.value.trim(), 
+                    cpfSocio: cpfSocioInput.value.replace(/\D/g, ''),
+                    cnpj: cnpjInput.value.replace(/[^\d]+/g, ''),
+                    empresaCEP: empresaCEPInput.value.replace(/\D/g, ''), 
+                    empresaLogradouro: empresaLogradouroInput.value.trim(), 
+                    empresaNumero: empresaNumeroInput.value.trim(), 
+                    empresaComplemento: empresaComplementoInput.value.trim(), 
+                    empresaBairro: empresaBairroInput.value.trim(), 
+                    empresaCidade: empresaCidadeInput.value.trim(), 
+                    empresaUF: empresaUFInput.value.trim().toUpperCase(),
+                    empresarioCEP: '', empresarioLogradouro: '', empresarioNumero: '', empresarioComplemento: '', empresarioBairro: '', empresarioCidade: '', empresarioUF: '',
+                    valorDiaria: parseFloat(valorDiariaInput.value.replace('.', '').replace(',', '.')),
+                    tipoServico: tipoServicoSelect.value, 
+                    operacao: operacaoSelect.value,
+                    atualizadoEm: serverTimestamp(), 
+                    ownerId: currentUserId 
+                };
+
+                if (enderecoEmpresarioIgualEmpresaCheckbox.checked) {
+                    dataToSave.empresarioCEP = dataToSave.empresaCEP;
+                    dataToSave.empresarioLogradouro = dataToSave.empresaLogradouro;
+                    dataToSave.empresarioNumero = dataToSave.empresaNumero;
+                    dataToSave.empresarioComplemento = dataToSave.empresaComplemento;
+                    dataToSave.empresarioBairro = dataToSave.empresaBairro;
+                    dataToSave.empresarioCidade = dataToSave.empresaCidade;
+                    dataToSave.empresarioUF = dataToSave.empresaUF;
+                } else {
+                    dataToSave.empresarioCEP = empresarioCEPInput.value.replace(/\D/g, '');
+                    dataToSave.empresarioLogradouro = empresarioLogradouroInput.value.trim();
+                    dataToSave.empresarioNumero = empresarioNumeroInput.value.trim();
+                    dataToSave.empresarioComplemento = empresarioComplementoInput.value.trim();
+                    dataToSave.empresarioBairro = empresarioBairroInput.value.trim();
+                    dataToSave.empresarioCidade = empresarioCidadeInput.value.trim();
+                    dataToSave.empresarioUF = empresarioUFInput.value.trim().toUpperCase();
+                }
+
+                let isValid = true;
+                if (!dataToSave.nomeSocio) { showStatusMessage("Preencha o Nome do Sócio.", "error", 0); nomeSocioInput.focus(); isValid = false; }
+                if (isValid && !dataToSave.razaoSocial) { showStatusMessage("Preencha a Razão Social.", "error", 0); razaoSocialInput.focus(); isValid = false; }
+                if (isValid && !dataToSave.rgSocio) { showStatusMessage("Preencha o RG do Sócio.", "error", 0); rgSocioInput.focus(); isValid = false; }
+                if (isValid && !validateCPF(cpfSocioInput.value)) { isValid = false; }
+                if (isValid && !dataToSave.cnpj) { showStatusMessage("Preencha o CNPJ da Empresa.", "error", 0); cnpjInput.focus(); isValid = false; }
+                if (isValid && !validateCnpj(cnpjInput.value)) { isValid = false; }
+                if (isValid && (isNaN(dataToSave.valorDiaria) || dataToSave.valorDiaria <=0) ) { showStatusMessage("Preencha um valor da diária válido.", "error", 0); valorDiariaInput.focus(); isValid = false; }
+                if (isValid && !dataToSave.tipoServico) { showStatusMessage("Selecione o tipo de serviço.", "error", 0); tipoServicoSelect.focus(); isValid = false; }
+                if (isValid && !dataToSave.operacao) { showStatusMessage("Selecione a operação.", "error", 0); operacaoSelect.focus(); isValid = false; }
+                
+                if (!enderecoEmpresarioIgualEmpresaCheckbox.checked) {
+                    if (isValid && !dataToSave.empresarioCEP) { showStatusMessage("Preencha o CEP do Empresário.", "error", 0); empresarioCEPInput.focus(); isValid = false; }
+                }
+                if (!isValid) { showLoading(false); return; }
+
+                const currentEditingId = editingDocIdInput.value;
+                const novoStatusDoFormulario = statusPrestadorSelect.value; 
+
+                if (currentEditingId) { 
+                    const originalDocRef = doc(db, `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`, currentEditingId);
+                    const originalDocSnap = await getDoc(originalDocRef);
+                    if (!originalDocSnap.exists()) { showStatusMessage("Documento original não encontrado para edição.", "error", 0); showLoading(false); return; }
+                    const originalData = originalDocSnap.data();
+                    const statusOriginalDoBanco = originalData.status || 'ativo'; 
+                    dataToSave.status = statusOriginalDoBanco;
+                    dataToSave.cadastradoEm = originalData.cadastradoEm || serverTimestamp(); 
+                    dataToSave.dataUltimaAtivacao = originalData.dataUltimaAtivacao || dataToSave.cadastradoEm; 
+                    dataToSave.dataUltimaDesativacao = originalData.dataUltimaDesativacao || null; 
+                    if (novoStatusDoFormulario !== statusOriginalDoBanco) {
+                        if (novoStatusDoFormulario === 'inativo') {
+                            const userConfirmed = await showCustomConfirm("Tem certeza que deseja DESATIVAR este Prestador?");
+                            if (!userConfirmed) { showLoading(false); statusPrestadorSelect.value = statusOriginalDoBanco; return; } 
+                            dataToSave.status = 'inativo';
+                            dataToSave.dataUltimaDesativacao = serverTimestamp(); 
+                        } else { 
+                            dataToSave.status = 'ativo';
+                            dataToSave.dataUltimaAtivacao = serverTimestamp(); 
+                            dataToSave.dataUltimaDesativacao = null; 
+                        }
+                    } 
+                } else { 
+                    dataToSave.cadastradoEm = serverTimestamp(); 
+                    dataToSave.status = 'ativo'; 
+                    dataToSave.dataUltimaAtivacao = dataToSave.cadastradoEm; 
+                    dataToSave.dataUltimaDesativacao = null; 
+                }
+                
+                try {
+                    const providersCollectionPath = `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`;
+                    if (currentEditingId) {
+                        const docRef = doc(db, providersCollectionPath, currentEditingId);
+                        await setDoc(docRef, dataToSave, { merge: true }); 
+                        showStatusMessage("Prestador atualizado com sucesso!", "success");
+                        resetFormulario();
+                        window.scrollTo({ top: appSection.offsetTop - 20, behavior: 'smooth' });
+                    } else {
+                        const docRef = await addDoc(collection(db, providersCollectionPath), dataToSave);
+                        showStatusMessage("Prestador cadastrado com sucesso!", "success");
+                        
+                        if (dataToSave.tipoServico.toLowerCase() === 'motorista') {
+                            if (confirm("Deseja gerar o contrato para este motorista agora?")) {
+                                window.open(`contrato.html?id=${docRef.id}`, '_blank');
+                            }
+                        }
+                        resetFormulario();
+                    }
+                } catch (e) {
+                    console.error("[DEBUG] Erro ao salvar dados:", e);
+                    showStatusMessage(`Erro ao salvar os dados: ${e.message}`, "error", 0);
+                } finally {
+                    showLoading(false);
+                }
+            });
+            
+            async function showCustomConfirm(message) { return new Promise((resolve) => { resolve(confirm(message)); }); } 
+            function formatFirebaseTimestamp(timestampObj, locale = 'pt-BR') { if (!timestampObj) return 'N/A'; try { let date; if (timestampObj.toDate) { date = timestampObj.toDate(); } else if (typeof timestampObj.seconds === 'number') { date = new Date(timestampObj.seconds * 1000 + (timestampObj.nanoseconds || 0) / 1000000); } else if (timestampObj instanceof Date) { date = timestampObj; } else { return String(timestampObj); } return date.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { console.warn("Erro ao formatar timestamp:", timestampObj, e); return 'Data inválida'; } }
+            
+            async function exportToExcel() {
+                if (!currentUserId) { showStatusMessage("Usuário não autenticado.", "error", 0); return; }
+                showLoading(true);
+                try {
+                    const providersCollectionPath = `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`;
+                    const q = firestoreQuery(collection(db, providersCollectionPath)); 
+                    const querySnapshot = await getDocs(q); 
+                    if (querySnapshot.empty) { showStatusMessage("Nenhum dado para exportar.", "success", 3000); showLoading(false); return; }
+                    const dataToExport = querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            "ID do Documento": doc.id, 
+                            "Nome Sócio": data.nomeSocio || '', "Razão Social": data.razaoSocial || '', "RG Sócio": data.rgSocio || '', "CPF Sócio": data.cpfSocio ? formatCPF(data.cpfSocio) : '', "CNPJ Empresa": data.cnpj ? formatCnpj(data.cnpj) : '',
+                            "CEP Empresa": data.empresaCEP ? formatCEP(data.empresaCEP) : '', "Logradouro Empresa": data.empresaLogradouro || '', "Nº Empresa": data.empresaNumero || '', "Compl. Empresa": data.empresaComplemento || '', "Bairro Empresa": data.empresaBairro || '', "Cidade Empresa": data.empresaCidade || '', "UF Empresa": data.empresaUF || '',
+                            "CEP Empresário": data.empresarioCEP ? formatCEP(data.empresarioCEP) : '', "Logradouro Empresário": data.empresarioLogradouro || '', "Nº Empresário": data.empresarioNumero || '', "Compl. Empresário": data.empresarioComplemento || '', "Bairro Empresário": data.empresarioBairro || '', "Cidade Empresário": data.empresarioCidade || '', "UF Empresário": data.empresarioUF || '',
+                            "Valor da Diária": data.valorDiaria || 0,  "Tipo de Serviço": data.tipoServico || '', "Operação": data.operacao || '',
+                            "Status": data.status === 'inativo' ? 'Inativo' : (data.status || 'Ativo'), 
+                            "Última Ativação": formatFirebaseTimestamp(data.dataUltimaAtivacao || data.cadastradoEm), 
+                            "Última Desativação": data.dataUltimaDesativacao ? formatFirebaseTimestamp(data.dataUltimaDesativacao) : 'N/A',
+                            "Cadastrado Em": formatFirebaseTimestamp(data.cadastradoEm), "Atualizado Em": formatFirebaseTimestamp(data.atualizadoEm),
+                        };
+                    });
+                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                    const wscols = [ {wch:30},{wch:30},{wch:30},{wch:15},{wch:15},{wch:20},{wch:20},{wch:12},{wch:30},{wch:10},{wch:20},{wch:20},{wch:20},{wch:5},{wch:12},{wch:30},{wch:10},{wch:20},{wch:20},{wch:20},{wch:5},{wch:20},{wch:15},{wch:20},{wch:20},{wch:10},{wch:20},{wch:20},{wch:20},{wch:20} ]; 
+                    worksheet['!cols'] = wscols;
+                    const valorDiariaColIndex = Object.keys(dataToExport[0]).indexOf("Valor da Diária");
+                    if (valorDiariaColIndex > -1) {
+                        for (let i = 0; i < dataToExport.length; i++) {
+                            const cellRefValor = XLSX.utils.encode_cell({r: i + 1, c: valorDiariaColIndex }); 
+                            if(worksheet[cellRefValor] && typeof dataToExport[i]["Valor da Diária"] === 'number') { 
+                                worksheet[cellRefValor].t = 'n'; worksheet[cellRefValor].z = 'R$ #,##0.00'; 
+                            }
+                        }
+                    }
+                    const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "Prestadores");
+                    const date = new Date();
+                    const filename = `Prestadores_${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}.xlsx`;
+                    XLSX.writeFile(workbook, filename); showStatusMessage("Dados exportados para Excel!", "success");
+                } catch (error) { showStatusMessage(`Erro ao exportar para Excel: ${error.message}`, "error", 0); } 
+                finally { showLoading(false); }
+            }
+            btnExportarExcel.addEventListener('click', exportToExcel);
+
+            btnVisualizarDados.addEventListener('click', async () => {
+                if (!currentUserId) { showStatusMessage("Usuário não autenticado.", "error", 0); return; }
+                visualizacaoDadosContainer.classList.remove('hidden'); visualizacaoDadosDiv.innerHTML = '<p class="text-center text-gray-500">Carregando...</p>'; visualizacaoStatus.textContent = '';
+                if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; } 
+                const providersCollectionPath = `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`;
+                const q = firestoreQuery(collection(db, providersCollectionPath)); 
+                try {
+                    unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+                        renderTable(querySnapshot.docs);
+                        visualizacaoStatus.textContent = `Exibindo ${querySnapshot.docs.length} prestador(es).`;
+                    }, (error) => { visualizacaoDadosDiv.innerHTML = `<p class="text-center text-red-500">Erro ao buscar: ${error.message}</p>`; });
+                } catch (error) { visualizacaoDadosDiv.innerHTML = `<p class="text-center text-red-500">Erro ao carregar dados: ${error.message}</p>`; }
+            });
+            
+            function formatValorParaInput(valorNumerico) { if (typeof valorNumerico !== 'number' || isNaN(valorNumerico)) { return ""; } return valorNumerico.toFixed(2).replace('.', ','); }
+            
+            async function carregarDadosParaEdicao(docId) {
+                if (!currentUserId) { showStatusMessage("Usuário não autenticado.", "error", 0); return; }
+                showLoading(true);
+                try {
+                    const docRef = doc(db, `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`, docId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        resetFormulario();
+                        const data = docSnap.data();
+                        nomeSocioInput.value = data.nomeSocio || ''; 
+                        razaoSocialInput.value = data.razaoSocial || '';
+                        rgSocioInput.value = data.rgSocio ? formatRG(data.rgSocio) : '';
+                        cpfSocioInput.value = data.cpfSocio ? formatCPF(data.cpfSocio) : '';
+                        cnpjInput.value = data.cnpj ? formatCnpj(data.cnpj) : ''; 
+                        empresaCEPInput.value = data.empresaCEP ? formatCEP(data.empresaCEP) : '';
+                        empresaLogradouroInput.value = data.empresaLogradouro || '';
+                        empresaNumeroInput.value = data.empresaNumero || '';
+                        empresaComplementoInput.value = data.empresaComplemento || '';
+                        empresaBairroInput.value = data.empresaBairro || '';
+                        empresaCidadeInput.value = data.empresaCidade || '';
+                        empresaUFInput.value = data.empresaUF || '';
+                        
+                        if (data.empresaCEP === data.empresarioCEP && data.empresaLogradouro === data.empresarioLogradouro) {
+                            enderecoEmpresarioIgualEmpresaCheckbox.checked = true;
+                        } else {
+                            enderecoEmpresarioIgualEmpresaCheckbox.checked = false;
+                        }
+                        toggleEnderecoEmpresarioSecao(); 
+
+                        empresarioCEPInput.value = data.empresarioCEP ? formatCEP(data.empresarioCEP) : '';
+                        empresarioLogradouroInput.value = data.empresarioLogradouro || '';
+                        empresarioNumeroInput.value = data.empresarioNumero || '';
+                        empresarioComplementoInput.value = data.empresarioComplemento || '';
+                        empresarioBairroInput.value = data.empresarioBairro || '';
+                        empresarioCidadeInput.value = data.empresarioCidade || '';
+                        empresarioUFInput.value = data.empresarioUF || '';
+                        
+                        valorDiariaInput.value = formatValorParaInput(data.valorDiaria); 
+                        tipoServicoSelect.value = data.tipoServico || '';
+                        operacaoSelect.value = data.operacao || '';
+                        editingDocIdInput.value = docId; 
+                        statusPrestadorSelect.value = data.status || 'ativo'; 
+                        statusContainer.classList.remove('hidden'); 
+                        formTitle.textContent = 'Editando Prestador de Serviço';
+                        btnSubmitForm.textContent = 'Salvar Alterações';
+                        btnSubmitForm.classList.remove('btn-primary', 'focus:ring-btn-primary');
+                        btnSubmitForm.classList.add('bg-green-600', 'hover:bg-green-700', 'focus:ring-green-500');
+                        btnCancelarEdicao.classList.remove('hidden');
+                        visualizacaoDadosContainer.classList.add('hidden'); 
+                        if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; } 
+                        window.scrollTo({ top: appSection.offsetTop - 20, behavior: 'smooth' }); 
+                    } else { showStatusMessage("Documento não encontrado.", "error", 0); }
+                } catch (error) { showStatusMessage(`Erro ao carregar dados para edição: ${error.message}`, "error", 0); } 
+                finally { showLoading(false); }
+            }
+
+            visualizacaoDadosDiv.addEventListener('click', (event) => {  if (event.target.classList.contains('edit-button') || event.target.closest('.edit-button')) { const button = event.target.classList.contains('edit-button') ? event.target : event.target.closest('.edit-button'); const docId = button.dataset.id; if (docId) { carregarDadosParaEdicao(docId); } } });
+
+            function renderTable(docs) {
+                if (!docs || docs.length === 0) { visualizacaoDadosDiv.innerHTML = '<p class="text-center text-gray-500">Nenhum prestador cadastrado.</p>'; visualizacaoStatus.textContent = 'Nenhum dado.'; return; }
+                let tableHTML = `<table class="min-w-full divide-y divide-slate-200"><thead class="bg-slate-50"><tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Razão Social</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nome Sócio</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CNPJ Empresa</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CPF Sócio</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tipo Serviço</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ações</th>
+                                </tr></thead><tbody class="bg-white divide-y divide-slate-200">`;
+                const sortedDocs = docs.sort((a, b) => { const timeA = a.data().cadastradoEm?.toDate ? a.data().cadastradoEm.toDate() : new Date(0); const timeB = b.data().cadastradoEm?.toDate ? b.data().cadastradoEm.toDate() : new Date(0); return timeB - timeA;  });
+                sortedDocs.forEach(doc => {
+                    const data = doc.data();
+                    tableHTML += `<tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.razaoSocial || data.nomeSocio || 'N/A'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.nomeSocio || 'N/A'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.cnpj ? formatCnpj(data.cnpj) : 'N/A'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.cpfSocio ? formatCPF(data.cpfSocio) : 'N/A'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.tipoServico || 'N/A'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${data.status === 'inativo' ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inativo</span>' : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button data-id="${doc.id}" class="edit-button">Editar</button>
+                                    </td></tr>`;
+                });
+                tableHTML += `</tbody></table>`;
+                visualizacaoDadosDiv.innerHTML = tableHTML;
+            }
+            btnFecharVisualizacao.addEventListener('click', () => { visualizacaoDadosContainer.classList.add('hidden'); if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; } });
+            
+            // Inicialização da UI
+            toggleEnderecoEmpresarioSecao();
+            if (!authInstance || !authInstance.currentUser) { showAuthSection(); }
+            registerFormContainer.classList.add('hidden'); 
+            appSection.classList.add('hidden'); 
+        } 
+    </script>
+</body>
+</html>
