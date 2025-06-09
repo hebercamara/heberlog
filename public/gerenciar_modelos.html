@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Modelos de Contrato - Heberlog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .loader { border-top-color: #D9242B; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input:focus, select:focus, textarea:focus { border-color: #D9242B !important; box-shadow: 0 0 0 2px rgba(217, 36, 43, 0.3) !important; }
+        .btn-primary { background-color: #D9242B; color: white; }
+        .btn-primary:hover { background-color: #b91c1c; }
+        .btn-delete { background-color: #ef4444; color: white; }
+        .btn-delete:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Tela de Verificação de Acesso -->
+    <div id="authScreen" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex flex-col items-center justify-center z-50">
+        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
+        <p id="authMessage" class="text-white text-lg mt-4">Verificando permissões...</p>
+    </div>
+
+    <!-- Conteúdo Principal (visível apenas para admins) -->
+    <div id="mainContent" class="hidden">
+        <div class="w-full max-w-6xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Painel de Gerenciamento de Contratos</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Coluna de Edição -->
+                <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">Editor de Modelos</h2>
+                    
+                    <div class="mb-4">
+                        <label for="modeloSelect" class="block text-sm font-medium text-gray-700">Selecione um Modelo para Editar</label>
+                        <select id="modeloSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm">
+                            <option value="">-- Carregando modelos... --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="modeloIdInput" class="block text-sm font-medium text-gray-700">ID do Modelo (ex: 'motorista', 'ajudante')</label>
+                        <input type="text" id="modeloIdInput" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" placeholder="Apenas letras minúsculas, sem espaços">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="templateTextarea" class="block text-sm font-medium text-gray-700">Conteúdo do Modelo</label>
+                        <textarea id="templateTextarea" rows="20" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 font-mono text-sm" placeholder="Cole aqui o texto do contrato..."></textarea>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button id="saveBtn" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md">Salvar Alterações</button>
+                        <button id="deleteBtn" class="w-full sm:w-auto btn-delete font-semibold py-2 px-4 rounded-md hidden">Apagar Modelo</button>
+                    </div>
+                    <p id="statusMessage" class="mt-3 text-sm text-center"></p>
+                </div>
+
+                <!-- Coluna de Ajuda e Ações -->
+                <div>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h3 class="text-lg font-semibold mb-3">Novo Modelo</h3>
+                        <p class="text-sm text-gray-600 mb-3">Limpa os campos para criar um novo modelo de contrato.</p>
+                        <button id="newBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-md">Criar Novo Modelo</button>
+                    </div>
+                    <div class="bg-blue-50 p-6 rounded-lg shadow-sm">
+                        <h3 class="text-lg font-semibold mb-3 text-blue-800">Placeholders Disponíveis</h3>
+                        <p class="text-sm text-gray-600 mb-4">Use estes valores no seu texto. Eles serão substituídos automaticamente pelos dados do prestador.</p>
+                        <div id="placeholdersList" class="text-sm font-mono text-blue-900 space-y-1">
+                            <!-- Lista será preenchida pelo JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAH6hH87QGaKU1k1_FH2yYAXqebvx2w890", 
+            authDomain: "cad-prestadores---heberlog.firebaseapp.com", 
+            projectId: "cad-prestadores---heberlog", 
+            storageBucket: "cad-prestadores---heberlog.appspot.com", 
+            messagingSenderId: "1006809562464", 
+            appId: "1:1006809562464:web:205bab4ea5e041a362f205", 
+            measurementId: "G-1B6Z1CJKPN" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- ELEMENTOS DO DOM ---
+        const authScreen = document.getElementById('authScreen');
+        const authMessage = document.getElementById('authMessage');
+        const mainContent = document.getElementById('mainContent');
+        const modeloSelect = document.getElementById('modeloSelect');
+        const modeloIdInput = document.getElementById('modeloIdInput');
+        const templateTextarea = document.getElementById('templateTextarea');
+        const saveBtn = document.getElementById('saveBtn');
+        const newBtn = document.getElementById('newBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const placeholdersList = document.getElementById('placeholdersList');
+        
+        const placeholders = [
+            '[Razao Social]', '[CNPJ]', '[Empresa Logradouro]', '[Empresa Numero]', 
+            '[Empresa Complemento]', '[Empresa Bairro]', '[Empresa Cidade]', '[Empresa UF]', '[Empresa CEP]',
+            '[Nome Socio]', '[RG Socio]', '[CPF Socio]', '[Empresario Logradouro]', '[Empresario Numero]',
+            '[Empresario Complemento]', '[Empresario Bairro]', '[Empresario Cidade]', '[Empresario UF]',
+            '[Empresario CEP]', '[Valor Diaria]', '[Valor Diaria por Extenso]', '[Data Atual ou Data de Cadastro]',
+            '[Nome Testemunha 1]', '[CPF Testemunha 1]', '[Nome Testemunha 2]', '[CPF Testemunha 2]'
+        ];
+        placeholdersList.innerHTML = placeholders.map(p => `<div>${p}</div>`).join('');
+
+        // --- LÓGICA DE AUTENTICAÇÃO E AUTORIZAÇÃO ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const adminsRef = collection(db, "admins");
+                    const querySnapshot = await getDocs(adminsRef);
+                    const adminEmails = querySnapshot.docs.map(doc => doc.data().email);
+
+                    if (adminEmails.includes(user.email)) {
+                        authScreen.classList.add('hidden');
+                        mainContent.classList.remove('hidden');
+                        await carregarModelos();
+                    } else {
+                        authMessage.textContent = "Acesso negado. Esta página é restrita a administradores.";
+                        authScreen.querySelector('.loader').classList.add('hidden');
+                    }
+                } catch (error) {
+                    authMessage.textContent = "Erro ao verificar permissões: " + error.message;
+                    authScreen.querySelector('.loader').classList.add('hidden');
+                }
+            } else {
+                authMessage.textContent = "Por favor, faça o login na página principal para acessar esta área.";
+                authScreen.querySelector('.loader').classList.add('hidden');
+            }
+        });
+
+        // --- FUNÇÕES DE GERENCIAMENTO ---
+        async function carregarModelos() {
+            try {
+                const modelosRef = collection(db, "modelos_contrato");
+                const querySnapshot = await getDocs(modelosRef);
+                
+                modeloSelect.innerHTML = '<option value="">-- Selecione um modelo --</option>';
+                querySnapshot.forEach((doc) => {
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = doc.id;
+                    modeloSelect.appendChild(option);
+                });
+            } catch (error) {
+                showStatus(`Erro ao carregar modelos: ${error.message}`, 'error');
+            }
+        }
+
+        function limparFormulario() {
+            modeloSelect.value = '';
+            modeloIdInput.value = '';
+            modeloIdInput.disabled = false;
+            templateTextarea.value = '';
+            deleteBtn.classList.add('hidden');
+            saveBtn.textContent = 'Salvar Novo Modelo';
+        }
+
+        function showStatus(message, type = 'success') {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-3 text-sm text-center ${type === 'success' ? 'text-green-600' : 'text-red-600'}`;
+            setTimeout(() => { statusMessage.textContent = ''; }, 4000);
+        }
+
+        // --- EVENT LISTENERS ---
+        modeloSelect.addEventListener('change', async (e) => {
+            const modeloId = e.target.value;
+            if (!modeloId) {
+                limparFormulario();
+                return;
+            }
+            try {
+                const modeloRef = doc(db, "modelos_contrato", modeloId);
+                const docSnap = await getDoc(modeloRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    modeloIdInput.value = docSnap.id;
+                    modeloIdInput.disabled = true;
+                    templateTextarea.value = data.template || '';
+                    deleteBtn.classList.remove('hidden');
+                    saveBtn.textContent = 'Salvar Alterações';
+                }
+            } catch (error) {
+                showStatus(`Erro ao carregar o modelo: ${error.message}`, 'error');
+            }
+        });
+
+        newBtn.addEventListener('click', limparFormulario);
+
+        saveBtn.addEventListener('click', async () => {
+            const modeloId = modeloIdInput.value.trim().toLowerCase().replace(/ /g, '_');
+            const templateTexto = templateTextarea.value;
+
+            if (!modeloId || !templateTexto) {
+                showStatus('O ID e o conteúdo do modelo não podem estar vazios.', 'error');
+                return;
+            }
+
+            if (/\s/.test(modeloId) || modeloId !== modeloIdInput.value.trim()) {
+                showStatus("O ID do modelo não pode conter espaços e deve ser em minúsculas.", "error");
+                return;
+            }
+            
+            try {
+                const modeloRef = doc(db, "modelos_contrato", modeloId);
+                await setDoc(modeloRef, { template: templateTexto });
+                showStatus('Modelo salvo com sucesso!', 'success');
+                await carregarModelos();
+                modeloSelect.value = modeloId;
+                modeloIdInput.disabled = true;
+                deleteBtn.classList.remove('hidden');
+                saveBtn.textContent = 'Salvar Alterações';
+            } catch (error) {
+                showStatus(`Erro ao salvar: ${error.message}`, 'error');
+            }
+        });
+
+        deleteBtn.addEventListener('click', async () => {
+            const modeloId = modeloIdInput.value;
+            if (!modeloId) return;
+
+            if (confirm(`Tem certeza de que deseja apagar o modelo "${modeloId}"? Esta ação não pode ser desfeita.`)) {
+                try {
+                    await deleteDoc(doc(db, "modelos_contrato", modeloId));
+                    showStatus(`Modelo "${modeloId}" apagado com sucesso.`, 'success');
+                    limparFormulario();
+                    await carregarModelos();
+                } catch (error) {
+                    showStatus(`Erro ao apagar o modelo: ${error.message}`, 'error');
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
