@@ -6,6 +6,10 @@
     <title>Geração de Contrato - Heberlog</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FOLHA DE ESTILOS DO EDITOR (A CORREÇÃO CRÍTICA ESTÁ AQUI) -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -30,18 +34,9 @@
         .btn-primary:hover {
             background-color: #b91c1c; 
         }
-        /* Estilo para o conteúdo do contrato renderizado */
-        #contratoConteudo p {
-            margin-bottom: 1em;
-        }
-        #contratoConteudo h1, #contratoConteudo h2, #contratoConteudo h3 {
-            font-weight: bold;
-            margin-top: 1.2em;
-            margin-bottom: 0.5em;
-        }
-        #contratoConteudo ul, #contratoConteudo ol {
-            padding-left: 2em;
-            margin-bottom: 1em;
+        /* Remove a borda padrão do contentor do Quill, pois já temos a nossa */
+        .ql-container.ql-snow {
+            border: none;
         }
     </style>
 </head>
@@ -77,7 +72,8 @@
         </div>
         
         <div class="overflow-y-auto max-h-[60vh] bg-gray-50 p-6 border rounded-md mb-4">
-            <div id="contratoConteudo" class="text-sm text-gray-900"></div>
+            <!-- Adicionada a classe ql-editor para aplicar os estilos do Quill -->
+            <div id="contratoConteudo" class="ql-editor text-sm text-gray-900"></div>
         </div>
         
         <div class="flex flex-col sm:flex-row gap-3">
@@ -111,11 +107,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- Variáveis Globais para guardar os dados originais ---
         let dadosPrestadorGlobal = null;
         let modeloContratoGlobal = null;
 
-        // --- FUNÇÕES UTILITÁRIAS E DE FORMATAÇÃO ---
         function formatCPF(cpf) { let v = cpf.replace(/\D/g, "").slice(0, 11); if (v.length > 9) { v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"); } else if (v.length > 6) { v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3"); } else if (v.length > 3) { v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2"); } return v; }
         function formatCEP(cep) { let v = cep.replace(/\D/g, "").slice(0, 8); if (v.length > 5) { v = v.replace(/(\d{5})(\d)/, "$1-$2"); } return v; }
         function formatCnpj(cnpj) { const cleaned = cnpj.replace(/\D/g, ''); if (cleaned.length <= 2) return cleaned; if (cleaned.length <= 5) return `${cleaned.slice(0, 2)}.${cleaned.slice(2)}`; if (cleaned.length <= 8) return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5)}`; if (cleaned.length <= 12) return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8)}`; return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8, 12)}-${cleaned.slice(12, 14)}`; }
@@ -163,7 +157,6 @@
             return resultado;
         }
 
-        // --- FUNÇÕES DE BUSCA E PREENCHIMENTO ---
         async function buscarModeloContrato(tipoServico) {
             const nomeModelo = tipoServico.toLowerCase();
             const modeloRef = doc(db, "modelos_contrato", nomeModelo);
@@ -227,7 +220,6 @@
             document.getElementById('errorContainer').classList.remove('hidden');
         }
 
-        // --- LÓGICA PRINCIPAL DA PÁGINA ---
         window.onload = () => {
             const params = new URLSearchParams(window.location.search);
             const docId = params.get('id');
@@ -250,7 +242,6 @@
                         dadosPrestadorGlobal = prestadorSnap.data();
                         modeloContratoGlobal = await buscarModeloContrato(dadosPrestadorGlobal.tipoServico);
                         
-                        // Pré-preenche o contrato sem os dados das testemunhas para a visualização inicial
                         const contratoPreenchido = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, {});
                         
                         document.getElementById('contratoTitulo').textContent = `Contrato - ${dadosPrestadorGlobal.razaoSocial}`;
@@ -268,7 +259,6 @@
             });
         };
 
-        // --- LÓGICA DOS BOTÕES DO CONTRATO ---
         document.getElementById('copiarContratoBtn').addEventListener('click', () => {
             const div = document.createElement('div');
             div.innerHTML = document.getElementById('contratoConteudo').innerHTML;
@@ -287,20 +277,18 @@
                 alert("Dados do contrato ainda não carregados. Tente novamente.");
                 return;
             }
-
             const testemunhas = {
                 nome1: document.getElementById('nomeTestemunha1').value,
                 cpf1: document.getElementById('cpfTestemunha1').value,
                 nome2: document.getElementById('nomeTestemunha2').value,
                 cpf2: document.getElementById('cpfTestemunha2').value,
             };
-
             const textoFinal = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, testemunhas);
-
             const printWindow = window.open('', '', 'height=800,width=800');
             printWindow.document.write('<html><head><title>Imprimir Contrato</title>');
-            printWindow.document.write('<style>body{font-family: Inter, sans-serif; line-height: 1.6;} p{margin-bottom:1em;} h1,h2,h3{font-weight:bold; margin-top:1.2em; margin-bottom:0.5em;} ul,ol{padding-left:2em;margin-bottom:1em;}</style>');
-            printWindow.document.write('</head><body>' + textoFinal + '</body></html>');
+            printWindow.document.write('<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">');
+            printWindow.document.write('<style>body{font-family: Inter, sans-serif; padding: 2rem;} .ql-editor{padding:0;}</style>');
+            printWindow.document.write('</head><body><div class="ql-editor">' + textoFinal + '</div></body></html>');
             printWindow.document.close();
             printWindow.print();
         });
