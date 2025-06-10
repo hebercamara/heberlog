@@ -77,7 +77,6 @@
         </div>
         
         <div class="overflow-y-auto max-h-[60vh] bg-gray-50 p-6 border rounded-md mb-4">
-            <!-- Alterado de <pre> para <div> para renderizar HTML -->
             <div id="contratoConteudo" class="text-sm text-gray-900"></div>
         </div>
         
@@ -111,6 +110,10 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- Variáveis Globais para guardar os dados originais ---
+        let dadosPrestadorGlobal = null;
+        let modeloContratoGlobal = null;
 
         // --- FUNÇÕES UTILITÁRIAS E DE FORMATAÇÃO ---
         function formatCPF(cpf) { let v = cpf.replace(/\D/g, "").slice(0, 11); if (v.length > 9) { v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"); } else if (v.length > 6) { v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3"); } else if (v.length > 3) { v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2"); } return v; }
@@ -180,7 +183,7 @@
             }
         }
 
-        function preencherContrato(modeloHTML, dados) {
+        function preencherContrato(modeloHTML, dados, testemunhas) {
             const dataAtual = new Date().toLocaleDateString('pt-BR');
             const valorExtenso = numeroParaExtenso(dados.valorDiaria);
             let contratoFinal = modeloHTML;
@@ -207,10 +210,10 @@
                 '\\[Valor Diaria\\]': dados.valorDiaria ? dados.valorDiaria.toFixed(2).replace('.', ',') : '0,00',
                 '\\[Valor Diaria por Extenso\\]': valorExtenso,
                 '\\[Data Atual ou Data de Cadastro\\]': dataAtual,
-                '\\[Nome Testemunha 1\\]': document.getElementById('nomeTestemunha1').value,
-                '\\[CPF Testemunha 1\\]': document.getElementById('cpfTestemunha1').value,
-                '\\[Nome Testemunha 2\\]': document.getElementById('nomeTestemunha2').value,
-                '\\[CPF Testemunha 2\\]': document.getElementById('cpfTestemunha2').value
+                '\\[Nome Testemunha 1\\]': testemunhas?.nome1 || '',
+                '\\[CPF Testemunha 1\\]': testemunhas?.cpf1 || '',
+                '\\[Nome Testemunha 2\\]': testemunhas?.nome2 || '',
+                '\\[CPF Testemunha 2\\]': testemunhas?.cpf2 || ''
             };
             for(const placeholder in placeholders){
                 contratoFinal = contratoFinal.replace(new RegExp(placeholder, 'g'), placeholders[placeholder]);
@@ -244,14 +247,13 @@
                             throw new Error("Prestador não encontrado no banco de dados. Verifique o ID ou se você tem permissão para acessá-lo.");
                         }
 
-                        const dadosPrestador = prestadorSnap.data();
-                        const modeloContrato = await buscarModeloContrato(dadosPrestador.tipoServico);
+                        dadosPrestadorGlobal = prestadorSnap.data();
+                        modeloContratoGlobal = await buscarModeloContrato(dadosPrestadorGlobal.tipoServico);
                         
-                        // Pré-preenche o contrato sem os dados das testemunhas
-                        const contratoPreenchido = preencherContrato(modeloContrato, dadosPrestador);
+                        // Pré-preenche o contrato sem os dados das testemunhas para a visualização inicial
+                        const contratoPreenchido = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, {});
                         
-                        document.getElementById('contratoTitulo').textContent = `Contrato - ${dadosPrestador.razaoSocial}`;
-                        // USA innerHTML PARA RENDERIZAR A FORMATAÇÃO
+                        document.getElementById('contratoTitulo').textContent = `Contrato - ${dadosPrestadorGlobal.razaoSocial}`;
                         document.getElementById('contratoConteudo').innerHTML = contratoPreenchido;
                         
                         document.getElementById('loadingSpinner').classList.add('hidden');
@@ -268,8 +270,9 @@
 
         // --- LÓGICA DOS BOTÕES DO CONTRATO ---
         document.getElementById('copiarContratoBtn').addEventListener('click', () => {
-            // Pega a versão em texto puro do conteúdo, sem tags HTML
-            let textoFinal = document.getElementById('contratoConteudo').innerText;
+            const div = document.createElement('div');
+            div.innerHTML = document.getElementById('contratoConteudo').innerHTML;
+            const textoFinal = div.innerText || div.textContent || "";
             
             navigator.clipboard.writeText(textoFinal).then(() => {
                 const statusMsg = document.getElementById('statusMessage');
@@ -280,16 +283,23 @@
         });
 
         document.getElementById('imprimirContratoBtn').addEventListener('click', () => {
-            const dadosPrestador = {}; // Os dados já estão no HTML, só precisamos dos dados das testemunhas
-            const modeloHTML = document.getElementById('contratoConteudo').innerHTML;
+            if (!dadosPrestadorGlobal || !modeloContratoGlobal) {
+                alert("Dados do contrato ainda não carregados. Tente novamente.");
+                return;
+            }
 
-            // Preenche os placeholders restantes (testemunhas) antes de imprimir
-            const textoFinal = preencherContrato(modeloHTML, dadosPrestador);
+            const testemunhas = {
+                nome1: document.getElementById('nomeTestemunha1').value,
+                cpf1: document.getElementById('cpfTestemunha1').value,
+                nome2: document.getElementById('nomeTestemunha2').value,
+                cpf2: document.getElementById('cpfTestemunha2').value,
+            };
+
+            const textoFinal = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, testemunhas);
 
             const printWindow = window.open('', '', 'height=800,width=800');
             printWindow.document.write('<html><head><title>Imprimir Contrato</title>');
-            printWindow.document.write('<style>body{font-family: Inter, sans-serif; line-height: 1.6;} p{margin-bottom:1em;} h1,h2,h3{font-weight:bold; margin-top:1.2em; margin-bottom:0.5em;}</style>');
-            // Escreve o HTML diretamente no corpo da nova janela para manter a formatação
+            printWindow.document.write('<style>body{font-family: Inter, sans-serif; line-height: 1.6;} p{margin-bottom:1em;} h1,h2,h3{font-weight:bold; margin-top:1.2em; margin-bottom:0.5em;} ul,ol{padding-left:2em;margin-bottom:1em;}</style>');
             printWindow.document.write('</head><body>' + textoFinal + '</body></html>');
             printWindow.document.close();
             printWindow.print();
