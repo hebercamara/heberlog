@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- FOLHA DE ESTILOS DO EDITOR (A CORREÇÃO CRÍTICA ESTÁ AQUI) -->
+    <!-- Folha de estilos do Editor, necessária para a formatação correta -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
     <style>
@@ -42,9 +42,9 @@
 </head>
 <body class="p-4 sm:p-8">
 
-    <div id="loadingSpinner" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div id="loadingSpinner" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex flex-col items-center justify-center z-50">
         <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
-        <p class="text-white text-lg ml-4">A carregar dados do contrato...</p>
+        <p class="text-white text-lg mt-4">A carregar dados do contrato...</p>
     </div>
 
     <div id="contratoContainer" class="bg-white p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-4xl mx-auto hidden">
@@ -72,7 +72,7 @@
         </div>
         
         <div class="overflow-y-auto max-h-[60vh] bg-gray-50 p-6 border rounded-md mb-4">
-            <!-- Adicionada a classe ql-editor para aplicar os estilos do Quill -->
+            <!-- A classe ql-editor é essencial para aplicar os estilos do Quill -->
             <div id="contratoConteudo" class="ql-editor text-sm text-gray-900"></div>
         </div>
         
@@ -100,7 +100,6 @@
             storageBucket: "cad-prestadores---heberlog.appspot.com", 
             messagingSenderId: "1006809562464", 
             appId: "1:1006809562464:web:205bab4ea5e041a362f205", 
-            measurementId: "G-1B6Z1CJKPN" 
         };
 
         const app = initializeApp(firebaseConfig);
@@ -157,17 +156,16 @@
             return resultado;
         }
 
-        async function buscarModeloContrato(tipoServico) {
-            const nomeModelo = tipoServico.toLowerCase();
-            const modeloRef = doc(db, "modelos_contrato", nomeModelo);
+        async function buscarModeloContrato(modeloId) {
+            const modeloRef = doc(db, "modelos_contrato", modeloId);
             try {
                 const modeloSnap = await getDoc(modeloRef);
                 if (!modeloSnap.exists()) {
-                    throw new Error(`Modelo de contrato para "${tipoServico}" não encontrado no Firestore.`);
+                    throw new Error(`Modelo de contrato com ID "${modeloId}" não encontrado no Firestore.`);
                 }
                 const dadosModelo = modeloSnap.data();
                 if (!dadosModelo.template) {
-                    throw new Error(`O documento do modelo para "${tipoServico}" não contém um campo 'template'.`);
+                    throw new Error(`O documento do modelo não contém um campo 'template'.`);
                 }
                 return dadosModelo.template;
             } catch (error) {
@@ -222,25 +220,29 @@
 
         window.onload = () => {
             const params = new URLSearchParams(window.location.search);
-            const docId = params.get('id');
+            const prestadorId = params.get('prestadorId');
+            const modeloId = params.get('modeloId');
 
-            if (!docId) {
-                showError("Nenhum ID de prestador foi fornecido na URL. Por favor, volte à página de cadastro.");
+            if (!prestadorId || !modeloId) {
+                showError("Informações incompletas para gerar o contrato. Volte à página de cadastro.");
                 return;
             }
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     try {
-                        const prestadorRef = doc(db, `artifacts/${firebaseConfig.appId}/users/${user.uid}/providers`, docId);
-                        const prestadorSnap = await getDoc(prestadorRef);
+                        const prestadorRef = doc(db, `artifacts/${firebaseConfig.appId}/users/${user.uid}/providers`, prestadorId);
+                        const [prestadorSnap, modeloHTML] = await Promise.all([
+                            getDoc(prestadorRef),
+                            buscarModeloContrato(modeloId)
+                        ]);
 
                         if (!prestadorSnap.exists()) {
-                            throw new Error("Prestador não encontrado no banco de dados. Verifique o ID ou se você tem permissão para acessá-lo.");
+                            throw new Error("Prestador não encontrado no banco de dados.");
                         }
-
+                        
                         dadosPrestadorGlobal = prestadorSnap.data();
-                        modeloContratoGlobal = await buscarModeloContrato(dadosPrestadorGlobal.tipoServico);
+                        modeloContratoGlobal = modeloHTML;
                         
                         const contratoPreenchido = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, {});
                         
@@ -260,11 +262,21 @@
         };
 
         document.getElementById('copiarContratoBtn').addEventListener('click', () => {
-            const div = document.createElement('div');
-            div.innerHTML = document.getElementById('contratoConteudo').innerHTML;
-            const textoFinal = div.innerText || div.textContent || "";
+            if (!dadosPrestadorGlobal || !modeloContratoGlobal) return;
             
-            navigator.clipboard.writeText(textoFinal).then(() => {
+            const testemunhas = {
+                nome1: document.getElementById('nomeTestemunha1').value,
+                cpf1: document.getElementById('cpfTestemunha1').value,
+                nome2: document.getElementById('nomeTestemunha2').value,
+                cpf2: document.getElementById('cpfTestemunha2').value,
+            };
+
+            const htmlFinal = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, testemunhas);
+            const divTemporaria = document.createElement('div');
+            divTemporaria.innerHTML = htmlFinal;
+            const textoPuro = divTemporaria.innerText || divTemporaria.textContent || "";
+            
+            navigator.clipboard.writeText(textoPuro).then(() => {
                 const statusMsg = document.getElementById('statusMessage');
                 statusMsg.textContent = 'Contrato copiado para a área de transferência!';
                 statusMsg.className = 'mt-4 text-center text-sm text-green-600';
@@ -283,12 +295,14 @@
                 nome2: document.getElementById('nomeTestemunha2').value,
                 cpf2: document.getElementById('cpfTestemunha2').value,
             };
-            const textoFinal = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, testemunhas);
+            const textoFinalHTML = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, testemunhas);
+
             const printWindow = window.open('', '', 'height=800,width=800');
             printWindow.document.write('<html><head><title>Imprimir Contrato</title>');
+            printWindow.document.write('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">');
             printWindow.document.write('<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">');
-            printWindow.document.write('<style>body{font-family: Inter, sans-serif; padding: 2rem;} .ql-editor{padding:0;}</style>');
-            printWindow.document.write('</head><body><div class="ql-editor">' + textoFinal + '</div></body></html>');
+            printWindow.document.write('<style>body{font-family: Inter, sans-serif; padding: 2rem;} .ql-editor{padding:0 !important; height:auto !important;}</style>');
+            printWindow.document.write('</head><body><div class="ql-editor">' + textoFinalHTML + '</div></body></html>');
             printWindow.document.close();
             printWindow.print();
         });
