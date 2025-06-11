@@ -350,12 +350,19 @@
                         <select id="tipoServico" name="tipoServico" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white">
                             <option value="" disabled selected>Selecione...</option>
                             <option value="Ajudante">Ajudante</option>
+                            <option value="Ajudante RJ">Ajudante RJ</option>
                             <option value="Motorista">Motorista</option>
+                            <option value="Motorista RJ">Motorista RJ</option>
                             <option value="Conferente">Conferente</option>
+                            <option value="Conferente RJ">Conferente RJ</option>
                             <option value="Manobrista">Manobrista</option>
+                            <option value="Manobrista RJ">Manobrista RJ</option>
                             <option value="Administrativo">Administrativo</option>
+                            <option value="Administrativo RJ">Administrativo RJ</option>
                             <option value="Coordenador">Coordenador</option>
+                            <option value="Coordenador RJ">Coordenador RJ</option>
                             <option value="Supervisor">Supervisor</option>
+                            <option value="Supervisor RJ">Supervisor RJ</option>
                             <option value="Gestor">Gestor</option>
                         </select>
                     </div>
@@ -387,14 +394,14 @@
                     <button type="button" id="btnCancelarEdicao" class="w-full sm:w-auto flex-grow bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 hidden">Cancelar Edição</button>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <button type="button" id="btnVisualizarDados" class="w-full sm:w-auto flex-grow btn-secondary-view font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-secondary-view focus:ring-offset-2">Visualizar Cadastros</button>
-                    <button type="button" id="btnExportarExcel" class="w-full sm:w-auto flex-grow btn-secondary-export font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus\:ring-secondary-export focus:ring-offset-2">Exportar para Excel</button>
+                    <button type="button" id="btnVisualizarDados" class="w-full sm:w-auto flex-grow bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm">Visualizar Cadastros</button>
+                    <button type="button" id="btnExportarExcel" class="w-full sm:w-auto flex-grow bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-md shadow-sm">Exportar para Excel</button>
                 </div>
                 
                 <!-- Botão de Admin para Gerenciar Modelos -->
                 <div class="mt-6 border-t pt-6">
                     <button type="button" id="btnGerenciarModelos" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-md shadow-sm hidden">
-                        Painel de Gerenciamento de Contratos
+                        Painel de Gestão de Contratos
                     </button>
                 </div>
             </form>
@@ -434,6 +441,7 @@
             setLogLevel, 
             onSnapshot, 
             query as firestoreQuery, 
+            where,
             getDocs,
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
@@ -457,7 +465,6 @@
             authInstance = getAuth(app);
             db = getFirestore(app);
             setLogLevel('debug'); 
-            console.log("[DEBUG] Firebase (Auth, Firestore) inicializado com sucesso.");
         } catch (error) {
             console.error("[DEBUG] Erro CRÍTICO ao inicializar o Firebase:", error);
             const authStatusMsgEl = document.getElementById('authStatusMessage');
@@ -498,21 +505,18 @@
         const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
         const btnVisualizarDados = document.getElementById('btnVisualizarDados');
         const btnExportarExcel = document.getElementById('btnExportarExcel');
-        const btnGerenciarModelos = document.getElementById('btnGerenciarModelos'); // Novo botão
-        
+        const btnGerenciarModelos = document.getElementById('btnGerenciarModelos');
         const visualizacaoDadosContainer = document.getElementById('visualizacaoDadosContainer');
         const visualizacaoDadosDiv = document.getElementById('visualizacaoDados');
         const visualizacaoStatus = document.getElementById('visualizacaoStatus');
         const btnFecharVisualizacao = document.getElementById('btnFecharVisualizacao');
         const statusContainer = document.getElementById('statusContainer');
         const statusPrestadorSelect = document.getElementById('statusPrestador');
-        
         const nomeSocioInput = document.getElementById('nomeSocio');
         const razaoSocialInput = document.getElementById('razaoSocial');
         const rgSocioInput = document.getElementById('rgSocio');
         const cpfSocioInput = document.getElementById('cpfSocio');
         const cpfError = document.getElementById('cpfError');
-        
         const empresaCEPInput = document.getElementById('empresaCEP');
         const empresaLogradouroInput = document.getElementById('empresaLogradouro');
         const empresaNumeroInput = document.getElementById('empresaNumero');
@@ -521,10 +525,8 @@
         const empresaCidadeInput = document.getElementById('empresaCidade');
         const empresaUFInput = document.getElementById('empresaUF');
         const empresaCepStatus = document.getElementById('empresaCepStatus');
-        
         const enderecoEmpresarioIgualEmpresaCheckbox = document.getElementById('enderecoEmpresarioIgualEmpresa');
         const secaoEnderecoEmpresarioDiv = document.getElementById('secaoEnderecoEmpresario');
-
         const empresarioCEPInput = document.getElementById('empresarioCEP');
         const empresarioLogradouroInput = document.getElementById('empresarioLogradouro');
         const empresarioNumeroInput = document.getElementById('empresarioNumero');
@@ -533,7 +535,6 @@
         const empresarioCidadeInput = document.getElementById('empresarioCidade');
         const empresarioUFInput = document.getElementById('empresarioUF');
         const empresarioCepStatus = document.getElementById('empresarioCepStatus');
-        
         const cnpjInput = document.getElementById('cnpj'); 
         const cnpjError = document.getElementById('cnpjError');
         const valorDiariaInput = document.getElementById('valorDiaria');
@@ -572,9 +573,9 @@
                 }
                 try {
                     const adminsRef = collection(db, "admins");
-                    const querySnapshot = await getDocs(adminsRef);
-                    const adminEmails = querySnapshot.docs.map(doc => doc.data().email);
-                    if (adminEmails.includes(user.email)) {
+                    const q = firestoreQuery(adminsRef, where("email", "==", user.email));
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
                         btnGerenciarModelos.classList.remove('hidden');
                     } else {
                         btnGerenciarModelos.classList.add('hidden');
@@ -610,7 +611,7 @@
 
             function formatCnpj(cnpj) { const cleaned = cnpj.replace(/\D/g, ''); if (cleaned.length <= 2) return cleaned; if (cleaned.length <= 5) return `${cleaned.slice(0, 2)}.${cleaned.slice(2)}`; if (cleaned.length <= 8) return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5)}`; if (cleaned.length <= 12) return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8)}`; return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8, 12)}-${cleaned.slice(12, 14)}`; }
             cnpjInput.addEventListener('input', (e) => { e.target.value = formatCnpj(e.target.value); validateCnpj(e.target.value); });
-            function validateCnpj(cnpj) { cnpj = cnpj.replace(/[^\d]+/g, ''); if (cnpj === '') { cnpjError.classList.add('hidden'); return true; } if (cnpj.length !== 14) { cnpjError.textContent = 'CNPJ deve conter 14 dígitos.'; cnpjError.classList.remove('hidden'); return false; } if (/^(\d)\1+$/.test(cnpj)) { cnpjError.textContent = 'CNPJ inválido (dígitos repetidos).'; cnpjError.classList.remove('hidden'); return false; } let tamanho = cnpj.length - 2; let numeros = cnpj.substring(0, tamanho); let digitos = cnpj.substring(tamanho); let soma = 0; let pos = tamanho - 7; for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; } let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11; if (resultado != digitos.charAt(0)) { cnpjError.textContent = 'CNPJ inválido (dígito verificador 1 incorreto).'; cnpjError.classList.remove('hidden'); return false; } tamanho = tamanho + 1; numeros = cnpj.substring(0, tamanho); soma = 0; pos = tamanho - 7; for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; } resultado = soma % 11 < 2 ? 0 : 11 - soma % 11; if (resultado != digitos.charAt(1)) { cnpjError.textContent = 'CNPJ inválido (dígito verificador 2 incorreto).'; cnpjError.classList.remove('hidden'); return false; } cnpjError.classList.add('hidden'); return true; }
+            function validateCnpj(cnpj) { cnpj = cnpj.replace(/[^\d]+/g, ''); if (cnpj === '') { cnpjError.classList.add('hidden'); return true; } if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) { cnpjError.textContent = 'CNPJ inválido.'; cnpjError.classList.remove('hidden'); return false; } let tamanho = cnpj.length - 2; let numeros = cnpj.substring(0, tamanho); let digitos = cnpj.substring(tamanho); let soma = 0; let pos = tamanho - 7; for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; } let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11; if (resultado != digitos.charAt(0)) { cnpjError.textContent = 'CNPJ inválido.'; cnpjError.classList.remove('hidden'); return false; } tamanho = tamanho + 1; numeros = cnpj.substring(0, tamanho); soma = 0; pos = tamanho - 7; for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; } resultado = soma % 11 < 2 ? 0 : 11 - soma % 11; if (resultado != digitos.charAt(1)) { cnpjError.textContent = 'CNPJ inválido.'; cnpjError.classList.remove('hidden'); return false; } cnpjError.classList.add('hidden'); return true; }
             valorDiariaInput.addEventListener('input', (e) => { let value = e.target.value.replace(/\D/g, ''); if (value === "") { e.target.value = ""; validateValorDiaria(e.target.value); return; } value = (parseInt(value, 10) / 100).toFixed(2).toString().replace('.', ','); e.target.value = value; validateValorDiaria(e.target.value); });
             function validateValorDiaria(valor) { const cleanedValor = valor.replace(/\D/g, ''); if (valor === '' || cleanedValor === '') { valorDiariaError.classList.add('hidden'); return true; } const numericValue = parseFloat(valor.replace('.', '').replace(',', '.')); if (isNaN(numericValue) || numericValue <= 0) { valorDiariaError.textContent = 'Valor da diária deve ser positivo.'; valorDiariaError.classList.remove('hidden'); return false; } valorDiariaError.classList.add('hidden'); return true; }
             
@@ -662,11 +663,7 @@
             empresarioCEPInput.addEventListener('blur', (e) => { buscarCEP(e.target.value, 'empresario'); });
             
             function toggleEnderecoEmpresarioSecao() {
-                if (enderecoEmpresarioIgualEmpresaCheckbox.checked) {
-                    secaoEnderecoEmpresarioDiv.classList.add('hidden');
-                } else {
-                    secaoEnderecoEmpresarioDiv.classList.remove('hidden');
-                }
+                secaoEnderecoEmpresarioDiv.classList.toggle('hidden', enderecoEmpresarioIgualEmpresaCheckbox.checked);
             }
             enderecoEmpresarioIgualEmpresaCheckbox.addEventListener('change', toggleEnderecoEmpresarioSecao);
             
@@ -695,45 +692,32 @@
             
             providerForm.addEventListener('submit', async (event) => {
                 event.preventDefault(); showLoading(true); statusMessage.classList.add('hidden'); 
-                if (!currentUserId) { showStatusMessage("Usuário não autenticado.", "error", 0); showLoading(false); return; }
+                if (!currentUserId) { showStatusMessage("Utilizador não autenticado.", "error", 0); showLoading(false); return; }
                 
                 const dataToSave = {
-                    nomeSocio: nomeSocioInput.value.trim(), 
-                    razaoSocial: razaoSocialInput.value.trim(), 
-                    rgSocio: rgSocioInput.value.trim(), 
+                    nomeSocio: nomeSocioInput.value.trim(),
+                    razaoSocial: razaoSocialInput.value.trim(),
+                    rgSocio: rgSocioInput.value.trim(),
                     cpfSocio: cpfSocioInput.value.replace(/\D/g, ''),
                     cnpj: cnpjInput.value.replace(/[^\d]+/g, ''),
-                    empresaCEP: empresaCEPInput.value.replace(/\D/g, ''), 
-                    empresaLogradouro: empresaLogradouroInput.value.trim(), 
-                    empresaNumero: empresaNumeroInput.value.trim(), 
-                    empresaComplemento: empresaComplementoInput.value.trim(), 
-                    empresaBairro: empresaBairroInput.value.trim(), 
-                    empresaCidade: empresaCidadeInput.value.trim(), 
+                    empresaCEP: empresaCEPInput.value.replace(/\D/g, ''),
+                    empresaLogradouro: empresaLogradouroInput.value.trim(),
+                    empresaNumero: empresaNumeroInput.value.trim(),
+                    empresaComplemento: empresaComplementoInput.value.trim(),
+                    empresaBairro: empresaBairroInput.value.trim(),
+                    empresaCidade: empresaCidadeInput.value.trim(),
                     empresaUF: empresaUFInput.value.trim().toUpperCase(),
-                    empresarioCEP: '', empresarioLogradouro: '', empresarioNumero: '', empresarioComplemento: '', empresarioBairro: '', empresarioCidade: '', empresarioUF: '',
                     valorDiaria: parseFloat(valorDiariaInput.value.replace('.', '').replace(',', '.')),
-                    tipoServico: tipoServicoSelect.value, 
+                    tipoServico: tipoServicoSelect.value,
                     operacao: operacaoSelect.value,
-                    atualizadoEm: serverTimestamp(), 
-                    ownerId: currentUserId 
+                    atualizadoEm: serverTimestamp(),
+                    ownerId: currentUserId
                 };
 
                 if (enderecoEmpresarioIgualEmpresaCheckbox.checked) {
-                    dataToSave.empresarioCEP = dataToSave.empresaCEP;
-                    dataToSave.empresarioLogradouro = dataToSave.empresaLogradouro;
-                    dataToSave.empresarioNumero = dataToSave.empresaNumero;
-                    dataToSave.empresarioComplemento = dataToSave.empresaComplemento;
-                    dataToSave.empresarioBairro = dataToSave.empresaBairro;
-                    dataToSave.empresarioCidade = dataToSave.empresaCidade;
-                    dataToSave.empresarioUF = dataToSave.empresaUF;
+                    Object.assign(dataToSave, { empresarioCEP: dataToSave.empresaCEP, empresarioLogradouro: dataToSave.empresaLogradouro, empresarioNumero: dataToSave.empresaNumero, empresarioComplemento: dataToSave.empresaComplemento, empresarioBairro: dataToSave.empresaBairro, empresarioCidade: dataToSave.empresaCidade, empresarioUF: dataToSave.empresaUF });
                 } else {
-                    dataToSave.empresarioCEP = empresarioCEPInput.value.replace(/\D/g, '');
-                    dataToSave.empresarioLogradouro = empresarioLogradouroInput.value.trim();
-                    dataToSave.empresarioNumero = empresarioNumeroInput.value.trim();
-                    dataToSave.empresarioComplemento = empresarioComplementoInput.value.trim();
-                    dataToSave.empresarioBairro = empresarioBairroInput.value.trim();
-                    dataToSave.empresarioCidade = empresarioCidadeInput.value.trim();
-                    dataToSave.empresarioUF = empresarioUFInput.value.trim().toUpperCase();
+                    Object.assign(dataToSave, { empresarioCEP: empresarioCEPInput.value.replace(/\D/g, ''), empresarioLogradouro: empresarioLogradouroInput.value.trim(), empresarioNumero: empresarioNumeroInput.value.trim(), empresarioComplemento: empresarioComplementoInput.value.trim(), empresarioBairro: empresarioBairroInput.value.trim(), empresarioCidade: empresarioCidadeInput.value.trim(), empresarioUF: empresarioUFInput.value.trim().toUpperCase() });
                 }
 
                 let isValid = true;
@@ -790,22 +774,25 @@
                         const docRef = doc(db, providersCollectionPath, currentEditingId);
                         await setDoc(docRef, dataToSave, { merge: true }); 
                         showStatusMessage("Prestador atualizado com sucesso!", "success");
-                        resetFormulario();
-                        window.scrollTo({ top: appSection.offsetTop - 20, behavior: 'smooth' });
                     } else {
                         const docRef = await addDoc(collection(db, providersCollectionPath), dataToSave);
                         showStatusMessage("Prestador cadastrado com sucesso!", "success");
                         
-                        if (dataToSave.tipoServico.toLowerCase() === 'motorista') {
-                            if (confirm("Deseja gerar o contrato para este motorista agora?")) {
-                                window.open(`contrato.html?id=${docRef.id}`, '_blank');
+                        const tipoServicoSelecionado = dataToSave.tipoServico;
+                        const modelosRef = collection(db, "modelos_contrato");
+                        const q = firestoreQuery(modelosRef, where("tiposDeServicoAssociados", "array-contains", tipoServicoSelecionado));
+                        const querySnapshot = await getDocs(q);
+
+                        if (!querySnapshot.empty) {
+                            if (confirm(`Deseja gerar o contrato para "${tipoServicoSelecionado}" agora?`)) {
+                                const modeloDocId = querySnapshot.docs[0].id; 
+                                window.open(`contrato.html?prestadorId=${docRef.id}&modeloId=${modeloDocId}`, '_blank');
                             }
                         }
-                        resetFormulario();
                     }
+                    resetFormulario();
                 } catch (e) {
-                    console.error("[DEBUG] Erro ao salvar dados:", e);
-                    showStatusMessage(`Erro ao salvar os dados: ${e.message}`, "error", 0);
+                    showStatusMessage(`Erro ao salvar: ${e.message}`, 'error');
                 } finally {
                     showLoading(false);
                 }
@@ -918,7 +905,7 @@
                         statusContainer.classList.remove('hidden'); 
                         formTitle.textContent = 'Editando Prestador de Serviço';
                         btnSubmitForm.textContent = 'Salvar Alterações';
-                        btnSubmitForm.classList.remove('btn-primary', 'focus:ring-btn-primary');
+                        btnSubmitForm.classList.remove('btn-primary');
                         btnSubmitForm.classList.add('bg-green-600', 'hover:bg-green-700', 'focus:ring-green-500');
                         btnCancelarEdicao.classList.remove('hidden');
                         visualizacaoDadosContainer.classList.add('hidden'); 
@@ -961,7 +948,6 @@
             }
             btnFecharVisualizacao.addEventListener('click', () => { visualizacaoDadosContainer.classList.add('hidden'); if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; } });
             
-            // Inicialização da UI
             toggleEnderecoEmpresarioSecao();
             if (!authInstance || !authInstance.currentUser) { showAuthSection(); }
             registerFormContainer.classList.add('hidden'); 
@@ -970,3 +956,4 @@
     </script>
 </body>
 </html>
+
