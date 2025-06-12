@@ -7,8 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Folha de estilos do Editor, necessária para a formatação correta -->
+    <!-- Folha de estilos do Editor, necessária para a formatação -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
+    <!-- Bibliotecas para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         body {
@@ -34,7 +38,11 @@
         .btn-primary:hover {
             background-color: #b91c1c; 
         }
-        /* Remove a borda padrão do contentor do Quill, pois já temos a nossa */
+        /* Estilos para a área de pré-visualização do contrato */
+        #contratoConteudo.ql-editor {
+            font-size: 10pt;
+            line-height: 1.5;
+        }
         .ql-container.ql-snow {
             border: none;
         }
@@ -72,13 +80,12 @@
         </div>
         
         <div class="overflow-y-auto max-h-[60vh] bg-gray-50 border rounded-md mb-4">
-            <!-- A classe ql-editor é essencial para aplicar os estilos do Quill -->
-            <div id="contratoConteudo" class="ql-editor p-6 text-sm text-gray-900"></div>
+            <div id="contratoConteudo" class="ql-editor p-6"></div>
         </div>
         
         <div class="flex flex-col sm:flex-row gap-3">
              <button id="copiarContratoBtn" class="w-full sm:w-auto flex-grow btn-primary font-semibold py-2 px-4 rounded-md">Copiar Texto (sem formatação)</button>
-             <button id="imprimirContratoBtn" class="w-full sm:w-auto flex-grow bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md">Imprimir</button>
+             <button id="exportarPdfBtn" class="w-full sm:w-auto flex-grow bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md">Exportar para PDF</button>
         </div>
         <p id="statusMessage" class="mt-4 text-center text-sm"></p>
     </div>
@@ -284,7 +291,7 @@
             });
         });
 
-        document.getElementById('imprimirContratoBtn').addEventListener('click', () => {
+        document.getElementById('exportarPdfBtn').addEventListener('click', async () => {
             if (!dadosPrestadorGlobal || !modeloContratoGlobal) {
                 alert("Dados do contrato ainda não carregados. Tente novamente.");
                 return;
@@ -296,15 +303,48 @@
                 cpf2: document.getElementById('cpfTestemunha2').value,
             };
             const textoFinalHTML = preencherContrato(modeloContratoGlobal, dadosPrestadorGlobal, testemunhas);
+            
+            const elementoParaPdf = document.createElement('div');
+            elementoParaPdf.className = 'ql-editor';
+            elementoParaPdf.innerHTML = textoFinalHTML;
+            
+            // Adiciona o elemento ao corpo do documento para que o html2canvas possa renderizá-lo
+            // mas o torna invisível para o utilizador
+            elementoParaPdf.style.position = 'absolute';
+            elementoParaPdf.style.left = '-9999px';
+            elementoParaPdf.style.width = '210mm'; // Largura de uma página A4
+            document.body.appendChild(elementoParaPdf);
 
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Imprimir Contrato</title>');
-            printWindow.document.write('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">');
-            printWindow.document.write('<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">');
-            printWindow.document.write('<style>body{font-family: Inter, sans-serif; padding: 2rem;} .ql-editor{padding:0 !important; height:auto !important;}</style>');
-            printWindow.document.write('</head><body><div class="ql-editor">' + textoFinalHTML + '</div></body></html>');
-            printWindow.document.close();
-            printWindow.print();
+            const { jsPDF } = window.jspdf;
+            const canvas = await html2canvas(elementoParaPdf, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
+            }
+            
+            pdf.save(`Contrato_${dadosPrestadorGlobal.razaoSocial}.pdf`);
+            document.body.removeChild(elementoParaPdf);
         });
 
         document.getElementById('cpfTestemunha1').addEventListener('input', (e) => { e.target.value = formatCPF(e.target.value); });
@@ -313,4 +353,5 @@
     </script>
 </body>
 </html>
+
 
