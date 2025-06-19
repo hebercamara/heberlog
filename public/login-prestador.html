@@ -109,7 +109,7 @@
                 <input type="password" id="registerPassword" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mínimo 6 caracteres">
             </div>
             <div class="mb-6">
-                <label for="confirmPassword" class="block text-gray-700 text-sm font-bold mb-2">Confirme a Senha:</label>
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirme a Senha:</label>
                 <input type="password" id="confirmPassword" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="********">
             </div>
             <div class="flex items-center justify-between">
@@ -157,10 +157,26 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Variáveis globais fornecidas pelo ambiente Canvas ou fallback para valores seguros
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        // Variáveis globais fornecidas pelo ambiente Canvas (se existirem)
+        // Se estiver a testar num ambiente local que não injeta estas variáveis, pode usar a sua config hardcoded abaixo.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'cad-prestadores---heberlog'; // Default para o seu project ID
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // COLE A SUA firebaseConfig AQUI ABAIXO:
+        const hardcodedFirebaseConfig = {
+            apiKey: "AIzaSyAH6hH87QGaKU1k1_FH2yYAXqebvx2w890", 
+            authDomain: "cad-prestadores---heberlog.firebaseapp.com", 
+            projectId: "cad-prestadores---heberlog", 
+            storageBucket: "cad-prestadores---heberlog.appspot.com", 
+            messagingSenderId: "1006809562464", 
+            appId: "1:1006809562464:web:205bab4ea5e041a362f205", 
+            measurementId: "G-1B6Z1CJKPN" 
+        };
+        // FIM DA SUA firebaseConfig
+
+
+        // Tenta usar a config injetada pelo Canvas, senão usa a hardcoded
+        let firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : hardcodedFirebaseConfig;
 
         // Inicializa o Firebase
         let app;
@@ -297,8 +313,7 @@
 
             try {
                 // 1. Procurar o CPF na coleção de 'providers'
-                // O UID do admin/empresa que cadastra os prestadores
-                const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // <-- SEU UID AQUI!
+                const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // SEU UID AQUI!
                 const providersCollectionRef = collection(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`);
                 const q = query(providersCollectionRef, where("cpfSocio", "==", cpfClean));
                 const querySnapshot = await getDocs(q);
@@ -328,12 +343,11 @@
                 await setDoc(prestadorRefToUpdate, { 
                     firebase_uid: newFirebaseUid,
                     registered_at: serverTimestamp(),
-                    // Manter outros campos do prestador (name, cpf, etc.) inalterados
-                }, { merge: true }); // Usar merge para apenas adicionar/atualizar o campo firebase_uid
+                }, { merge: true });
 
                 showModal('Registo bem-sucedido! Pode agora fazer login.');
                 toggleAuthForms('login');
-                loginCpfInput.value = formatCPF(cpfClean); // Preenche o CPF formatado
+                loginCpfInput.value = formatCPF(cpfClean);
                 loginPasswordInput.focus();
 
             } catch (error) {
@@ -367,13 +381,10 @@
             }
 
             try {
-                // Tentar login no Firebase Authentication
                 const userCredential = await signInWithEmailAndPassword(auth, userEmail, password);
                 userId = userCredential.user.uid;
                 
-                // Buscar dados do prestador do Firestore para exibir o nome (se necessário)
-                // Usando o UID do utilizador logado para encontrar o prestador associado
-                const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // <-- SEU UID AQUI!
+                const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // SEU UID AQUI!
                 const providersCollectionRef = collection(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`);
                 const q = query(providersCollectionRef, where("firebase_uid", "==", userId));
                 const querySnapshot = await getDocs(q);
@@ -577,12 +588,10 @@
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
-                    // Tentar buscar o nome do prestador do Firestore usando o UID
-                    // (assumindo que o UID foi salvo no registro do prestador)
                     let prestadorName = 'Prestador';
                     let prestadorCpf = user.email ? user.email.split('@')[0] : 'N/A';
                     
-                    const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // <-- SEU UID AQUI!
+                    const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // SEU UID AQUI!
                     const providersCollectionRef = collection(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`);
                     const q = query(providersCollectionRef, where("firebase_uid", "==", userId));
                     
@@ -617,13 +626,11 @@
         // --- Event Listeners ---
         showLoginBtn.addEventListener('click', () => toggleAuthForms('login'));
         showRegisterBtn.addEventListener('click', () => toggleAuthForms('register'));
-        // Assegura que o evento de submit é disparado corretamente para os forms
         loginForm.addEventListener('submit', (e) => { e.preventDefault(); loginForm.dispatchEvent(new Event('actualSubmit', { bubbles: true, cancelable: true })); });
         registerForm.addEventListener('submit', (e) => { e.preventDefault(); registerForm.dispatchEvent(new Event('actualSubmit', { bubbles: true, cancelable: true })); });
         
-        // Listener personalizado para o submit dos formulários
-        loginForm.addEventListener('actualSubmit', async (e) => { /* a lógica de login já está aqui */ });
-        registerForm.addEventListener('actualSubmit', async (e) => { /* a lógica de registo já está aqui */ });
+        loginForm.addEventListener('actualSubmit', async (e) => { /* lógica de login está no evento 'submit' */ });
+        registerForm.addEventListener('actualSubmit', async (e) => { /* lógica de registo está no evento 'submit' */ });
 
         startScannerBtn.addEventListener('click', startScanner);
         stopScannerBtn.addEventListener('click', stopScanner);
