@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regras para o QR Code diário (visível para todos os logados, admin escreve)
+    // Caminho: app_data/{appId}/daily_qr_code/{docId}
+    match /app_data/{appId}/daily_qr_code/{docId} {
+      allow read: if request.auth != null;
+      // Por enquanto, qualquer utilizador autenticado pode escrever o QR Code diário para simplificar o teste.
+      // Em produção, isso seria restrito apenas a administradores:
+      // allow write: if request.auth != null && request.auth.token.admin == true;
+      allow write: if request.auth != null;
+    }
+
+    // Regras para registros de presença
+    // Caminho: app_data/{appId}/attendance/{date}/records/{docId}
+    match /app_data/{appId}/attendance/{date}/records/{docId} {
+      allow read: if request.auth != null;
+      // Um utilizador autenticado pode escrever a sua própria presença, e o ID do documento é o UID do utilizador.
+      allow write: if request.auth != null && request.auth.uid == docId;
+    }
+
+    // Regras para a coleção 'admins' (utilizada pelo gerenciar_modelos.html e index.html para verificar permissões)
+    // Caminho: admins/{docId}
+    match /admins/{docId} {
+      // Apenas leitura por qualquer utilizador autenticado para verificar o status de admin.
+      allow read: if request.auth != null;
+      // Ninguém deve poder criar/editar/apagar administradores pela aplicação web:
+      // allow write: if false;
+    }
+
+    // Regras para a coleção 'modelos_contrato' (utilizada pelo gerenciar_modelos.html e contrato.html)
+    // Caminho: modelos_contrato/{docId}
+    match /modelos_contrato/{docId} {
+      // Modelos podem ser lidos por qualquer utilizador autenticado.
+      allow read: if request.auth != null;
+      // Para teste, qualquer utilizador autenticado pode criar/editar/apagar modelos de contrato.
+      // Em produção, isso seria restrito apenas a administradores:
+      // allow write: if request.auth != null && request.auth.token.admin == true;
+      allow write: if request.auth != null;
+    }
+
+    // Regras para a coleção de prestadores (gerida pelo index.html, usada pelo login-prestador.html)
+    // Caminho: artifacts/{appId}/users/{userId}/providers/{prestadorId}
+    // O {userId} aqui é o UID do utilizador administrador que cadastrou o prestador.
+    // O {prestadorId} é o ID do documento do prestador.
+    match /artifacts/{appId}/users/{userId}/providers/{prestadorId} {
+        // LEITURA PARA AUTO-REGISTO (CUIDADO EM PRODUÇÃO!):
+        // Permite que utilizadores NÃO AUTENTICADOS leiam documentos para validar o CPF antes de se registarem.
+        // EM PRODUÇÃO, esta validação de "CPF existe?" deveria ser feita por uma Cloud Function para segurança.
+        // Se usar Cloud Function, mude esta linha para 'allow read: if request.auth != null && request.auth.uid == userId;'
+        allow read: if true; // AVISO: EXTREMAMENTE PERMISSIVO PARA DEMONSTRAÇÃO DE REGISTO.
+
+        // ESCRITA: Apenas o utilizador administrador (ownerId) ou quem tenha permissão pode escrever aqui.
+        // Em um cenário de auto-registo onde o prestador atualiza o 'firebase_uid',
+        // o utilizador que está a atualizar (o prestador recém-autenticado) não é o 'ownerId'.
+        // Precisamos ajustar para permitir que o dono do documento (o admin) escreva,
+        // E talvez uma Cloud Function para que o prestador possa "reivindicar" seu UID.
+        // Por enquanto, para simplificar o teste de REGISTO, manteremos o 'allow write: if request.auth != null;'
+        // para que a app do prestador possa adicionar o 'firebase_uid' ao seu próprio doc.
+        // ISSO VAI GERAR UM NOVO ERRO DE PERMISSÃO QUANDO O PRESTADOR TENTAR ESCREVER O UID NO SEU PRÓPRIO DOC,
+        // POIS SÓ O ADMIN (ownerId) PODE ESCREVER LÁ.
+        // A SOLUÇÃO CORRETA PARA O REGISTO DE PRESTADOR SERIA:
+        // 1. O admin cadastra o prestador (allow write: if request.auth != null && request.auth.uid == userId;).
+        // 2. Para o prestador adicionar o UID a si mesmo, precisaríamos de uma Cloud Function.
+        // VOU DEFINIR AQUI COMO O MAIS SEGURO DENTRO DO CONTEXTO DO UID DO DONO:
+        allow write: if request.auth != null && request.auth.uid == userId; // Apenas o owner pode escrever.
+        // Isto significa que a app do prestador não conseguirá escrever o UID no seu próprio documento após o registo.
+        // A Cloud Function é realmente a forma mais segura de contornar isso.
+    }
+
+    // Regras para dados públicos e privados gerais (mantidos do seu modelo)
+    match /artifacts/{appId}/public/data/{collection}/{docId} {
+        allow read, write: if request.auth != null;
+    }
+
+    match /artifacts/{appId}/users/{userId}/{collection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

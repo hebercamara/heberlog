@@ -739,16 +739,29 @@
                 const currentEditingId = editingDocIdInput.value;
                 const novoStatusDoFormulario = statusPrestadorSelect.value; 
 
+                // Fetch original data to preserve firebase_uid if editing
+                let originalFirebaseUid = null;
+                if (currentEditingId) {
+                    const originalDocRef = doc(db, `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`, currentEditingId);
+                    const originalDocSnap = await getDoc(originalDocRef);
+                    if (originalDocSnap.exists()) {
+                        originalFirebaseUid = originalDocSnap.data().firebase_uid || null;
+                    }
+                }
+
                 if (currentEditingId) { 
                     const originalDocRef = doc(db, `artifacts/${firestoreAppIdPath}/users/${currentUserId}/providers`, currentEditingId);
                     const originalDocSnap = await getDoc(originalDocRef);
                     if (!originalDocSnap.exists()) { showStatusMessage("Documento original não encontrado para edição.", "error", 0); showLoading(false); return; }
                     const originalData = originalDocSnap.data();
                     const statusOriginalDoBanco = originalData.status || 'ativo'; 
+                    
                     dataToSave.status = statusOriginalDoBanco;
                     dataToSave.cadastradoEm = originalData.cadastradoEm || serverTimestamp(); 
                     dataToSave.dataUltimaAtivacao = originalData.dataUltimaAtivacao || dataToSave.cadastradoEm; 
                     dataToSave.dataUltimaDesativacao = originalData.dataUltimaDesativacao || null; 
+                    dataToSave.firebase_uid = originalFirebaseUid; // Preserve o UID existente ao editar
+
                     if (novoStatusDoFormulario !== statusOriginalDoBanco) {
                         if (novoStatusDoFormulario === 'inativo') {
                             const userConfirmed = await showCustomConfirm("Tem certeza que deseja DESATIVAR este Prestador?");
@@ -766,6 +779,7 @@
                     dataToSave.status = 'ativo'; 
                     dataToSave.dataUltimaAtivacao = dataToSave.cadastradoEm; 
                     dataToSave.dataUltimaDesativacao = null; 
+                    dataToSave.firebase_uid = null; // <<< Adiciona o campo para NOVOS cadastros <<<
                 }
                 
                 try {
@@ -821,10 +835,11 @@
                             "Última Ativação": formatFirebaseTimestamp(data.dataUltimaAtivacao || data.cadastradoEm), 
                             "Última Desativação": data.dataUltimaDesativacao ? formatFirebaseTimestamp(data.dataUltimaDesativacao) : 'N/A',
                             "Cadastrado Em": formatFirebaseTimestamp(data.cadastradoEm), "Atualizado Em": formatFirebaseTimestamp(data.atualizadoEm),
+                            "Firebase UID": data.firebase_uid || 'N/A' // <<< Adiciona o campo Firebase UID para exportação <<<
                         };
                     });
                     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-                    const wscols = [ {wch:30},{wch:30},{wch:30},{wch:15},{wch:15},{wch:20},{wch:20},{wch:12},{wch:30},{wch:10},{wch:20},{wch:20},{wch:20},{wch:5},{wch:12},{wch:30},{wch:10},{wch:20},{wch:20},{wch:20},{wch:5},{wch:20},{wch:15},{wch:20},{wch:20},{wch:10},{wch:20},{wch:20},{wch:20},{wch:20} ]; 
+                    const wscols = [ {wch:30},{wch:30},{wch:30},{wch:15},{wch:15},{wch:20},{wch:20},{wch:12},{wch:30},{wch:10},{wch:20},{wch:20},{wch:20},{wch:5},{wch:12},{wch:30},{wch:10},{wch:20},{wch:20},{wch:20},{wch:5},{wch:20},{wch:15},{wch:20},{wch:20},{wch:10},{wch:20},{wch:20},{wch:20},{wch:20},{wch:30} ]; // Aumenta o tamanho da coluna para UID
                     worksheet['!cols'] = wscols;
                     const valorDiariaColIndex = Object.keys(dataToExport[0]).indexOf("Valor da Diária");
                     if (valorDiariaColIndex > -1) {
@@ -927,6 +942,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CPF Sócio</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tipo Serviço</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Firebase UID</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ações</th>
                                 </tr></thead><tbody class="bg-white divide-y divide-slate-200">`;
                 const sortedDocs = docs.sort((a, b) => { const timeA = a.data().cadastradoEm?.toDate ? a.data().cadastradoEm.toDate() : new Date(0); const timeB = b.data().cadastradoEm?.toDate ? b.data().cadastradoEm.toDate() : new Date(0); return timeB - timeA;  });
@@ -939,6 +955,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.cpfSocio ? formatCPF(data.cpfSocio) : 'N/A'}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.tipoServico || 'N/A'}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${data.status === 'inativo' ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inativo</span>' : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${data.firebase_uid || 'N/A'}</td> <!-- Display Firebase UID -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <button data-id="${doc.id}" class="edit-button">Editar</button>
                                     </td></tr>`;

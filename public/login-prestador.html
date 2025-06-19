@@ -26,15 +26,15 @@
         }
         /* Estilos do modal personalizado */
         .modal {
-            display: none; /* Oculto por padrão */
-            position: fixed; /* Posição fixa */
-            z-index: 1000; /* Acima de tudo */
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
             left: 0;
             top: 0;
-            width: 100%; /* Largura total */
-            height: 100%; /* Altura total */
-            overflow: auto; /* Permite rolagem se necessário */
-            background-color: rgba(0,0,0,0.4); /* Preto com opacidade */
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.4); 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -44,7 +44,7 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            max-width: 90%; /* Largura responsiva */
+            max-width: 90%; 
             margin: auto;
         }
         .close-button {
@@ -68,21 +68,53 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center">
 
-    <!-- Página de Login para Prestador de Serviço -->
-    <div id="login-page" class="container bg-white p-8 rounded-xl shadow-lg mt-8 flex flex-col items-center">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Login do Prestador</h1>
+    <!-- Seção de Autenticação (Login/Registo) para Prestador de Serviço -->
+    <div id="auth-section" class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg mt-8 flex flex-col items-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Acesso do Prestador</h1>
+
+        <div class="flex mb-6 w-full">
+            <button id="showLoginBtn" class="flex-1 py-3 px-6 rounded-tl-lg rounded-bl-lg text-white font-bold bg-blue-600 hover:bg-blue-700 transition duration-300">
+                Entrar
+            </button>
+            <button id="showRegisterBtn" class="flex-1 py-3 px-6 rounded-tr-lg rounded-br-lg text-gray-700 font-bold bg-gray-200 hover:bg-gray-300 transition duration-300">
+                Registar
+            </button>
+        </div>
+
+        <!-- Formulário de Login -->
         <form id="loginForm" class="w-full max-w-sm">
             <div class="mb-4">
-                <label for="username" class="block text-gray-700 text-sm font-bold mb-2">CPF:</label>
-                <input type="text" id="username" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Digite seu CPF (apenas números)">
+                <label for="loginCpf" class="block text-gray-700 text-sm font-bold mb-2">CPF:</label>
+                <input type="text" id="loginCpf" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Digite seu CPF (apenas números)">
             </div>
             <div class="mb-6">
-                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Senha:</label>
-                <input type="password" id="password" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="********">
+                <label for="loginPassword" class="block text-gray-700 text-sm font-bold mb-2">Senha:</label>
+                <input type="password" id="loginPassword" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="********">
             </div>
             <div class="flex items-center justify-between">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 w-full">
                     Entrar
+                </button>
+            </div>
+        </form>
+
+        <!-- Formulário de Registo -->
+        <form id="registerForm" class="w-full max-w-sm hidden">
+            <div class="mb-4">
+                <label for="registerCpf" class="block text-gray-700 text-sm font-bold mb-2">CPF:</label>
+                <input type="text" id="registerCpf" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Digite seu CPF (apenas números)">
+            </div>
+            <div class="mb-4">
+                <label for="registerPassword" class="block text-gray-700 text-sm font-bold mb-2">Crie uma Senha:</label>
+                <input type="password" id="registerPassword" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="mb-6">
+                <label for="confirmPassword" class="block text-gray-700 text-sm font-bold mb-2">Confirme a Senha:</label>
+                <input type="password" id="confirmPassword" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="********">
+            </div>
+            <div class="flex items-center justify-between">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 w-full">
+                    Registar
                 </button>
             </div>
         </form>
@@ -122,10 +154,10 @@
     <script type="module">
         // Importa os módulos necessários do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Variáveis globais fornecidas pelo ambiente Canvas (se existirem)
+        // Variáveis globais fornecidas pelo ambiente Canvas ou fallback para valores seguros
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -136,26 +168,33 @@
         let auth;
         let userId;
 
-        // Usuários simulados (em um sistema real, seriam geridos no Firebase Authentication e/ou Firestore)
-        // Para este modelo, usaremos CPF como email e senha simplificada para login via Firebase Auth.
-        // Você precisará CRIAR esses usuários no Firebase Authentication manualmente para testar.
-        // Ex: Crie um usuário com email "12345678900@prestador.com" e senha "senha123" no console do Firebase Auth.
-        const simulatedUsers = {
-            '12345678900': { name: 'João Silva', email: '12345678900@prestador.com' },
-            '98765432199': { name: 'Maria Oliveira', email: '98765432199@prestador.com' },
-            '11122233344': { name: 'Carlos Souza', email: '11122233344@prestador.com' },
-        };
+        // Tenta inicializar o Firebase. Se a configuração for inválida, exibe um erro.
+        if (Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } else {
+            console.error("Firebase Configuração inválida ou ausente. Não é possível inicializar o Firebase.");
+            document.body.innerHTML = '<div class="min-h-screen flex items-center justify-center bg-gray-100"><p class="text-red-500 text-xl font-bold p-4 rounded-lg bg-white shadow-md">Erro: Configuração Firebase ausente. Contacte o suporte.</p></div>';
+            throw new Error("Firebase not initialized due to invalid config.");
+        }
 
         let currentLoggedInUser = null;
         let videoStream = null;
         let animationFrameId = null;
 
         // Elementos do DOM
-        const loginPage = document.getElementById('login-page');
-        const scannerPage = document.getElementById('scanner-page');
+        const authSection = document.getElementById('auth-section');
+        const showLoginBtn = document.getElementById('showLoginBtn');
+        const showRegisterBtn = document.getElementById('showRegisterBtn');
         const loginForm = document.getElementById('loginForm');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
+        const registerForm = document.getElementById('registerForm');
+        const loginCpfInput = document.getElementById('loginCpf');
+        const loginPasswordInput = document.getElementById('loginPassword');
+        const registerCpfInput = document.getElementById('registerCpf');
+        const registerPasswordInput = document.getElementById('registerPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const scannerPage = document.getElementById('scanner-page');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const output = document.getElementById('output');
@@ -168,6 +207,16 @@
         const modalMessage = document.getElementById('modalMessage');
         const modalCloseBtn = document.getElementById('modalCloseBtn');
         const closeButton = document.querySelector('.close-button');
+
+        // --- Funções Utilitárias ---
+        function formatCPF(cpf) { 
+            let v = cpf.replace(/\D/g, "");
+            v = v.slice(0, 11);
+            if (v.length > 9) { v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"); } 
+            else if (v.length > 6) { v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3"); } 
+            else if (v.length > 3) { v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2"); } 
+            return v; 
+        }
 
         // --- Funções do Modal ---
         function showModal(message) {
@@ -183,63 +232,174 @@
         closeButton.onclick = hideModal;
         modalCloseBtn.onclick = hideModal;
 
-        // --- Funções de Navegação ---
-        function showPage(pageId) {
-            loginPage.classList.add('hidden');
+        // --- Funções de Navegação de Página (UI) ---
+        function showAuthSection() {
+            authSection.classList.remove('hidden');
+            authSection.classList.add('flex');
             scannerPage.classList.add('hidden');
-            document.getElementById(pageId).classList.remove('hidden');
-            document.getElementById(pageId).classList.add('flex');
-        }
-
-        function showLoginPage() {
+            scannerPage.classList.remove('flex');
             stopScanner();
-            usernameInput.value = '';
-            passwordInput.value = '';
-            currentLoggedInUser = null;
-            auth.signOut(); // Desloga o usuário do Firebase Auth
-            showPage('login-page');
+            loginCpfInput.value = '';
+            loginPasswordInput.value = '';
+            registerCpfInput.value = '';
+            registerPasswordInput.value = '';
+            confirmPasswordInput.value = '';
         }
 
         function showScannerPage() {
-            showPage('scanner-page');
+            authSection.classList.add('hidden');
+            authSection.classList.remove('flex');
+            scannerPage.classList.remove('hidden');
+            scannerPage.classList.add('flex');
             startScannerBtn.classList.remove('hidden');
             stopScannerBtn.classList.add('hidden');
             output.textContent = '';
         }
 
-        // --- Lógica de Login via Firebase Authentication ---
-        loginForm.addEventListener('submit', async (e) => {
+        function toggleAuthForms(showFormId) {
+            if (showFormId === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                showLoginBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                showLoginBtn.classList.add('bg-blue-600', 'text-white');
+                showRegisterBtn.classList.add('bg-gray-200', 'text-gray-700');
+                showRegisterBtn.classList.remove('bg-green-600', 'text-white');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                showRegisterBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                showRegisterBtn.classList.add('bg-green-600', 'text-white');
+                showLoginBtn.classList.add('bg-gray-200', 'text-gray-700');
+                showLoginBtn.classList.remove('bg-blue-600', 'text-white');
+            }
+        }
+
+        // --- Lógica de Registo de Prestador ---
+        registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const cpf = usernameInput.value.replace(/\D/g, ''); // Remove não-dígitos para CPF
-            const password = passwordInput.value;
+            const cpfClean = registerCpfInput.value.replace(/\D/g, '');
+            const password = registerPasswordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            const userEmail = `${cpfClean}@prestador.com`;
 
-            const userLookup = simulatedUsers[cpf];
-
-            if (!userLookup) {
-                showModal('CPF não encontrado. Por favor, verifique seu CPF.');
+            if (!cpfClean || cpfClean.length !== 11) {
+                showModal('Por favor, insira um CPF válido com 11 dígitos.');
+                return;
+            }
+            if (password.length < 6) {
+                showModal('A senha deve ter pelo menos 6 caracteres.');
+                return;
+            }
+            if (password !== confirmPassword) {
+                showModal('As senhas não coincidem.');
                 return;
             }
 
             try {
-                // Firebase Auth precisa de um formato de email válido. Usamos um email "fictício".
-                const userCredential = await signInWithEmailAndPassword(auth, userLookup.email, password);
+                // 1. Procurar o CPF na coleção de 'providers'
+                // O UID do admin/empresa que cadastra os prestadores
+                const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // <-- SEU UID AQUI!
+                const providersCollectionRef = collection(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`);
+                const q = query(providersCollectionRef, where("cpfSocio", "==", cpfClean));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    showModal('CPF não encontrado na nossa base de dados. Contacte a transportadora.');
+                    return;
+                }
+
+                // Há um prestador com este CPF. Verificar se já está registado.
+                const prestadorDoc = querySnapshot.docs[0];
+                const prestadorData = prestadorDoc.data();
+                const prestadorDocId = prestadorDoc.id;
+
+                if (prestadorData.firebase_uid) { // Campo para verificar se já tem UID Firebase associado
+                    showModal('Este CPF já está associado a uma conta. Por favor, faça login.');
+                    return;
+                }
+                
+                // 2. Criar a conta no Firebase Authentication
+                const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
+                const newFirebaseUid = userCredential.user.uid;
+                console.log("Conta Firebase Auth criada para UID:", newFirebaseUid);
+
+                // 3. Atualizar o documento do prestador no Firestore com o novo UID do Firebase Auth
+                const prestadorRefToUpdate = doc(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`, prestadorDocId);
+                await setDoc(prestadorRefToUpdate, { 
+                    firebase_uid: newFirebaseUid,
+                    registered_at: serverTimestamp(),
+                    // Manter outros campos do prestador (name, cpf, etc.) inalterados
+                }, { merge: true }); // Usar merge para apenas adicionar/atualizar o campo firebase_uid
+
+                showModal('Registo bem-sucedido! Pode agora fazer login.');
+                toggleAuthForms('login');
+                loginCpfInput.value = formatCPF(cpfClean); // Preenche o CPF formatado
+                loginPasswordInput.focus();
+
+            } catch (error) {
+                console.error("Erro no registo:", error);
+                let errorMessage = `Erro ao registar: ${error.message}`;
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'Já existe uma conta com este CPF. Por favor, faça login.';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'A senha é muito fraca (mínimo 6 caracteres).';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'Formato de CPF inválido para registo (interno).';
+                }
+                showModal(errorMessage);
+            }
+        });
+
+        // --- Lógica de Login de Prestador ---
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cpfClean = loginCpfInput.value.replace(/\D/g, '');
+            const password = loginPasswordInput.value;
+            const userEmail = `${cpfClean}@prestador.com`;
+
+            if (!cpfClean || cpfClean.length !== 11) {
+                showModal('Por favor, insira um CPF válido com 11 dígitos.');
+                return;
+            }
+            if (!password) {
+                showModal('Por favor, insira a sua senha.');
+                return;
+            }
+
+            try {
+                // Tentar login no Firebase Authentication
+                const userCredential = await signInWithEmailAndPassword(auth, userEmail, password);
+                userId = userCredential.user.uid;
+                
+                // Buscar dados do prestador do Firestore para exibir o nome (se necessário)
+                // Usando o UID do utilizador logado para encontrar o prestador associado
+                const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // <-- SEU UID AQUI!
+                const providersCollectionRef = collection(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`);
+                const q = query(providersCollectionRef, where("firebase_uid", "==", userId));
+                const querySnapshot = await getDocs(q);
+
+                let prestadorName = `Prestador ${cpfClean}`;
+                if (!querySnapshot.empty) {
+                    prestadorName = querySnapshot.docs[0].data().nomeSocio || prestadorName;
+                }
+
                 currentLoggedInUser = {
-                    uid: userCredential.user.uid,
-                    name: userLookup.name,
-                    cpf: cpf,
-                    email: userLookup.email
+                    uid: userId,
+                    name: prestadorName,
+                    cpf: cpfClean,
+                    email: userEmail
                 };
+                
                 showScannerPage();
                 showModal(`Bem-vindo, ${currentLoggedInUser.name}! Agora aponte a câmera para o QR Code.`);
+
             } catch (error) {
                 console.error("Erro no login:", error);
                 let errorMessage = 'Erro ao fazer login. Verifique seu CPF e senha.';
-                if (error.code === 'auth/wrong-password') {
-                    errorMessage = 'Senha incorreta. Tente novamente.';
-                } else if (error.code === 'auth/user-not-found') {
-                    errorMessage = 'Usuário não encontrado. Verifique seu CPF.';
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
+                    errorMessage = "CPF ou senha inválidos. Se ainda não se registou, use a aba 'Registar'.";
                 } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = 'Formato de CPF inválido para login (interno).';
+                    errorMessage = "O formato do CPF (interno) é inválido.";
                 }
                 showModal(errorMessage);
             }
@@ -247,7 +407,6 @@
 
         // --- Lógica de Escaneamento de QR Code ---
         let videoInitialized = false;
-        let qrCodeTimeout = null; // Para controlar o tempo limite de leitura
 
         async function startScanner() {
             if (videoInitialized && videoStream && videoStream.active) {
@@ -261,7 +420,7 @@
             try {
                 videoStream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: 'environment',
+                        facingMode: 'environment', // Câmera traseira
                         width: { ideal: 640 },
                         height: { ideal: 480 }
                     }
@@ -283,7 +442,7 @@
             } catch (err) {
                 console.error("Erro ao acessar a câmera: ", err);
                 output.textContent = `Erro ao acessar a câmera: ${err.name}. Verifique as permissões.`;
-                showModal(`Não foi possível acessar a câmera: ${err.message}. Por favor, verifique as permissões do navegador e tente novamente.`);
+                showModal(`Não foi possível aceder à câmara: ${err.message}. Por favor, verifique as permissões do navegador e tente novamente.`);
                 stopScanner();
             }
         }
@@ -323,12 +482,12 @@
                     });
 
                     if (code) {
-                        output.textContent = 'QR Code detectado!';
+                        output.textContent = 'QR Code detetado!';
                         handleQrCodeScan(code.data);
                         stopScanner();
                         return;
                     } else {
-                        output.textContent = 'Procurando QR Code...';
+                        output.textContent = 'A procurar QR Code...';
                     }
                 }
                 animationFrameId = requestAnimationFrame(tick);
@@ -339,8 +498,8 @@
 
         async function handleQrCodeScan(scannedData) {
             if (!currentLoggedInUser) {
-                showModal('Erro: Você precisa estar logado para escanear o QR Code.');
-                showLoginPage();
+                showModal('Erro: Precisa de estar autenticado para escanear o QR Code.');
+                showAuthSection();
                 return;
             }
 
@@ -351,76 +510,137 @@
                 const qrCodeDocSnap = await getDoc(qrCodeDocRef);
                 if (qrCodeDocSnap.exists()) {
                     const qrCodeData = qrCodeDocSnap.data();
-                    // Valida se o QR Code escaneado corresponde ao armazenado no Firestore e se é do dia atual
                     if (qrCodeData.value === scannedData && qrCodeData.date === today) {
                         await recordAttendance(currentLoggedInUser.cpf, currentLoggedInUser.name);
-                        showModal(`Presença registrada com sucesso para ${currentLoggedInUser.name}!`);
-                        setTimeout(() => showLoginPage(), 1500); // Volta para o login
+                        showModal(`Presença registada com sucesso para ${currentLoggedInUser.name}!`);
+                        if (window.opener && window.opener.postMessage) {
+                             window.opener.postMessage({
+                                 type: 'ATTENDANCE_CHECK_IN',
+                                 payload: {
+                                     cpf: currentLoggedInUser.cpf,
+                                     name: currentLoggedInUser.name
+                                 }
+                             }, '*'); // Mudar para o domínio real da admin_app.html em produção!
+                        }
+                        setTimeout(() => showAuthSection(), 1500);
                     } else {
                         showModal('QR Code inválido ou expirado. Por favor, escaneie o QR Code do dia atual exibido na transportadora.');
-                        startScanner(); // Reinicia o scanner
+                        startScanner();
                     }
                 } else {
-                    showModal('Nenhum QR Code diário encontrado no sistema. Por favor, contate o administrador.');
-                    startScanner(); // Reinicia o scanner
+                    showModal('Nenhum QR Code diário encontrado no sistema. Por favor, contacte o administrador.');
+                    startScanner();
                 }
             } catch (error) {
                 console.error("Erro ao validar QR Code no Firestore:", error);
                 showModal(`Erro ao validar QR Code: ${error.message}.`);
-                startScanner(); // Reinicia o scanner
+                startScanner();
             }
         }
 
-        // --- Registro de Presença no Firestore ---
+        // --- Registo de Presença no Firestore ---
         async function recordAttendance(cpf, name) {
             if (!db || !currentLoggedInUser) {
-                showModal('Erro: O sistema não está pronto para registrar a presença.');
+                showModal('Erro: O sistema não está pronto para registar a presença.');
                 return;
             }
             const today = new Date().toISOString().slice(0, 10);
-            // Documento por CPF dentro de uma subcoleção 'records' do documento do dia
-            const attendanceDocRef = doc(db, `app_data/${appId}/attendance/${today}/records`, cpf); 
+            const attendanceDocRef = doc(db, `app_data/${appId}/attendance/${today}/records`, currentLoggedInUser.uid);
 
             try {
                 await setDoc(attendanceDocRef, {
                     cpf: cpf,
                     name: name,
                     checkInTime: new Date().toLocaleTimeString('pt-BR'),
-                    timestamp: serverTimestamp() // Carimbo de data/hora do servidor
-                });
-                console.log(`Presença de ${name} (${cpf}) registrada no Firestore.`);
+                    timestamp: serverTimestamp(),
+                    userId: currentLoggedInUser.uid
+                }, { merge: true });
+                console.log(`Presença de ${name} (${cpf}) registada no Firestore.`);
             } catch (error) {
-                console.error("Erro ao registrar presença no Firestore:", error);
-                showModal(`Erro ao registrar presença: ${error.message}`);
+                console.error("Erro ao registar presença no Firestore:", error);
+                showModal(`Erro ao registar presença: ${error.message}`);
             }
         }
 
         // --- Inicialização do Firebase e Autenticação ---
         async function initializeFirebaseAndAuth() {
-            if (!app) {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+            if (initialAuthToken) {
+                try {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Login com custom token no Prestador App.");
+                } catch (error) {
+                    console.error("Erro ao fazer login com custom token:", error);
+                    showModal(`Erro de autenticação inicial: ${error.message}.`);
+                }
             }
 
-            // O `onAuthStateChanged` é essencial para saber quando o Firebase Auth está pronto
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    userId = user.uid; // ID do usuário logado (prestador)
-                    console.log("Firebase Auth pronto. Logado como:", userId);
-                    // Se o usuário já estiver logado, leve-o para a página do scanner
+                    userId = user.uid;
+                    // Tentar buscar o nome do prestador do Firestore usando o UID
+                    // (assumindo que o UID foi salvo no registro do prestador)
+                    let prestadorName = 'Prestador';
+                    let prestadorCpf = user.email ? user.email.split('@')[0] : 'N/A';
+                    
+                    const companyAdminOrFixedUID = 'DutLhn6K1yQt5r3z1DkNew2N7xX2'; // <-- SEU UID AQUI!
+                    const providersCollectionRef = collection(db, `artifacts/${appId}/users/${companyAdminOrFixedUID}/providers`);
+                    const q = query(providersCollectionRef, where("firebase_uid", "==", userId));
+                    
+                    try {
+                        const querySnapshot = await getDocs(q);
+                        if (!querySnapshot.empty) {
+                            const data = querySnapshot.docs[0].data();
+                            prestadorName = data.nomeSocio || data.razaoSocial || prestadorName;
+                            prestadorCpf = data.cpfSocio || prestadorCpf;
+                        }
+                    } catch (e) {
+                        console.warn("Não foi possível buscar dados completos do prestador:", e);
+                    }
+
+                    currentLoggedInUser = {
+                        uid: userId,
+                        name: prestadorName,
+                        cpf: prestadorCpf,
+                        email: user.email
+                    };
+
+                    console.log("Firebase Auth pronto. Utilizador logado:", userId);
                     showScannerPage(); 
                 } else {
-                    console.log("Nenhum usuário logado. Pronto para o login.");
-                    showLoginPage(); // Garante que a página de login seja exibida
+                    console.log("Nenhum utilizador logado. Exibindo seção de autenticação.");
+                    currentLoggedInUser = null;
+                    showAuthSection();
                 }
             });
         }
 
         // --- Event Listeners ---
+        showLoginBtn.addEventListener('click', () => toggleAuthForms('login'));
+        showRegisterBtn.addEventListener('click', () => toggleAuthForms('register'));
+        // Assegura que o evento de submit é disparado corretamente para os forms
+        loginForm.addEventListener('submit', (e) => { e.preventDefault(); loginForm.dispatchEvent(new Event('actualSubmit', { bubbles: true, cancelable: true })); });
+        registerForm.addEventListener('submit', (e) => { e.preventDefault(); registerForm.dispatchEvent(new Event('actualSubmit', { bubbles: true, cancelable: true })); });
+        
+        // Listener personalizado para o submit dos formulários
+        loginForm.addEventListener('actualSubmit', async (e) => { /* a lógica de login já está aqui */ });
+        registerForm.addEventListener('actualSubmit', async (e) => { /* a lógica de registo já está aqui */ });
+
         startScannerBtn.addEventListener('click', startScanner);
         stopScannerBtn.addEventListener('click', stopScanner);
-        logoutBtn.addEventListener('click', showLoginPage);
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showModal('Sessão terminada.');
+                showAuthSection();
+            } catch (error) {
+                console.error("Erro ao fazer logout:", error);
+                showModal(`Erro ao terminar sessão: ${error.message}`);
+            }
+        });
+
+        // Formatação de CPF em tempo real nos inputs
+        loginCpfInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
+        registerCpfInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
 
         // --- Início da Aplicação ---
         window.onload = initializeFirebaseAndAuth;
